@@ -100,7 +100,11 @@ struct QrCode {
      */
     uint16_t rawSize;
 
-    uint8_t *formatPoly;
+    /**
+     * format polynomial
+     * since it only contains 1s and 0s, we can just use an int and do operations bitwise 
+     */
+    uint16_t formatPoly;
     
     QrCode(uint8_t version, uint8_t ecLevel){
         this->version = version;
@@ -112,9 +116,11 @@ struct QrCode {
         bitmapSize = size * bitmapStride;
         bitmap = new uint8_t[bitmapSize];
         memset(bitmap, 0, bitmapSize);
-
-        formatPoly =  new uint8_t[15];
-        memset(formatPoly, 0, 15 );
+    }
+    ~QrCode(){
+        delete[] this->bitmap;
+        if (this->raw != nullptr)
+            delete[] this->raw;
     }
 };
 

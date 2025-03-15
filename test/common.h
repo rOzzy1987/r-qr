@@ -12,18 +12,6 @@
 
 #include "../src/qr.h"
 
-void print_qr(QrCode *code) {
-    printf(CCBOW  "\n\n\n\n");
-    for(uint8_t y = 0; y< code->size; y++) {
-        printf(CCBOW "        ");
-        for (uint8_t x = 0; x< code->bitmapStride; x++)
-            BMP(code->bitmap[y*code->bitmapStride+x]);
-        printf("        \n");
-    }
-    printf("\n\n\n\n" CCRST);
-}
-
-
 CQrGen *subject; 
 
 void setUp(void) {

@@ -7,14 +7,6 @@ static void test_rest(const uint8_t *a, const uint16_t al, const uint8_t *b, con
     uint16_t rl;
     Gf256.polyRest(a,al,b,bl,r,rl);
 
-    // printf("\n{{");
-    // for(int i = 0; i< al; i++) printf("%d%s", a[i], i == al-1 ? "" : ", ");
-    // printf("}, %d, {", al);
-    // for(int i = 0; i< bl; i++) printf("%d%s", b[i], i == bl-1 ? "" : ", ");
-    // printf("}, %d, {", bl);
-    // for(int i = 0; i< rl; i++) printf("%d%s", r[i], i == rl-1 ? "" : ", ");
-    // printf("}}, ");
-
     ASSERT_EQ_UI16(min(bl-1, al), rl);
     if (rl > 0) ASSERT_EQ_UI8A(ref, r, rl);
 }

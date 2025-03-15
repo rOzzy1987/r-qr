@@ -186,12 +186,12 @@ class CGf256 {
          * @param divisor The divisor polynomial represented as an array of coefficients.
          * @param divisorLen The length of the divisor polynomial.
          * @param result The array to store the remainder of the division.
-         * @param resultLen Reference to store the length of the remainder. (should be )
+         * @param resultLen Reference to store the length of the remainder. (should be of length divisorLen - 1)
          */
 
         void polyRest(const uint8_t *dividend, uint16_t dividendLen, const uint8_t *divisor, uint16_t divisorLen, uint8_t *result, uint16_t &resultLen) {
             uint16_t dummy;
-            
+
             uint8_t *rest = new uint8_t[dividendLen];
             uint8_t *subtr = new uint8_t[dividendLen];
             memcpy(rest, dividend, dividendLen);
@@ -220,6 +220,17 @@ class CGf256 {
             delete[] temp;
         }
     
+        /**
+         * Computes the generator polynomial of degree n for QR codes.
+         *
+         * The generator polynomial is used to generate the error correction
+         * codes for QR codes. The polynomial is computed using the formula
+         * x^n + x^(n-1) + ... + x^2 + x + 1.
+         *
+         * @param degree The degree of the generator polynomial.
+         * @param genLen The length of the generated polynomial.
+         * @return The generated polynomial as an array of coefficients.
+         */
         uint8_t* getGeneratorPoly(uint16_t degree, uint16_t &genLen) {
             genLen = degree+1;
             uint8_t *result = new uint8_t[genLen];

@@ -5,14 +5,6 @@ static void test_mul(const uint8_t *a, const uint16_t al, const uint8_t *b, cons
     uint16_t rl;
     Gf256.polyMul(a,al,b,bl,r,rl);
 
-    // printf("\n{{");
-    // for(int i = 0; i< al; i++) printf("%d%s", a[i], i == al-1 ? "" : ", ");
-    // printf("}, %d, {", al);
-    // for(int i = 0; i< bl; i++) printf("%d%s", b[i], i == bl-1 ? "" : ", ");
-    // printf("}, %d, {", bl);
-    // for(int i = 0; i< rl; i++) printf("%d%s", r[i], i == rl-1 ? "" : ", ");
-    // printf("}}, ");
-
     ASSERT_EQ_UI16(al+bl-1, rl);
     ASSERT_EQ_UI8A(ref, r, rl);
 }
@@ -28,8 +20,8 @@ void gf256_polymul() {
         int expected_product_len;  
     };  
 
-    // // Original ai cases
     TestCase testCases[] = {  
+        // AI suggested cases
         {{1, 2}, 2, {3, 4}, 2, {3, 2, 8}},  // Basic Test
         {{5, 0, 1}, 3, {2, 1}, 2, {10, 5, 2, 1}}, // With a zero coefficient
         {{1}, 1, {1, 2, 3}, 3, {1, 2, 3}}, // Multiply by a constant

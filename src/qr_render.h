@@ -14,6 +14,11 @@ class CQrRenderer {
         }
 
         void renderFormat(QrCode *code){
+            // s: 21
+            // i:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
+            // X:  0  1  2  3  4  5  7 13 14 15 16 17 18 19 20 
+            // Y: 20 19 18 17 16 15 14  8  7  5  4  3  2  1  0
+
             for(uint8_t i = 0; i < 15; i++){
                 uint8_t 
                     s = code->size,
@@ -23,11 +28,11 @@ class CQrRenderer {
                             : i 
                         : i + code->size - 15,
                     y = i < 7 
-                        ? s - i -1 
+                        ? s - 1 - i 
                         : i < 9 
-                            ? s - 16
-                            : s - 15,
-                    v = code->formatPoly[i] > 0;
+                            ? 15 - i
+                            : 14 - i,
+                    v = (uint8_t)(code->formatPoly >> (14 - i)) & 1;
                 setPixel(code, x, 8, v);
                 setPixel(code, 8, y, v);
             }
@@ -90,6 +95,8 @@ class CQrRenderer {
                 }
                 
             }
+        
+            delete[] af;
         }
         void renderStatics(QrCode *code){
             renderQuietZones(code);
@@ -102,7 +109,7 @@ class CQrRenderer {
             uint8_t al,
                 *af = qr_alignment_factors(code->version, al);
 
-            for(uint8_t y = 0; y< code->size; y++) 
+            for(uint8_t y = 0; y< code->size; y++) {
                 for (uint8_t x= 0; x< code->size; x++) {
                     if(isProtected(code, x,y,af,al)) continue;
 
@@ -110,6 +117,9 @@ class CQrRenderer {
                         z = mask(m,x,y) ;
                     code->bitmap[i] ^= z << (uint8_t)(7-(x & 7));
                 }
+            }
+            
+            delete[] af;
         }
 
         
@@ -196,6 +206,7 @@ class CQrRenderer {
                     renderAlignment(code, af[i], af[j]);
                 }
             } 
+            delete[] af;
         }
 
         void renderLocator(QrCode *code, uint8_t x, uint8_t y) {

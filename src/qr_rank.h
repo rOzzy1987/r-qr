@@ -155,18 +155,12 @@ class CQrRanker {
                 }
             }
 
-            // printf("\nblack count: %3d", score);
-            // printf("\n   out of:   %3d", ss);
             score = (score * 100) / ss; 
-            // printf("\npercentage:  %3d", score);
             score = score >= 50 || score % 5 == 0
                 ? (score / 5) *5
                 : ((score + 5) / 5) * 5; 
-            // printf("\nrounded:     %3d", score);
             score = score > 50 ? score - 50 : 50 - score;
-            // printf("\ndeviation:   %3d", score);
             score <<= 1;
-            // printf("\nfinal score: %3d\n", score);
 
             return score;
         }

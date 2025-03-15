@@ -417,8 +417,8 @@ uint8_t *qr_alignment_factors(uint8_t v, uint8_t &n) {
 }
 
 
-const uint8_t qr_format_divisor[] = {1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1};
-const uint8_t qr_format_mask[] = {1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0};
+const uint16_t qr_format_divisor = 0b10100110111;
+const uint16_t qr_format_mask = 0b101010000010010;
 
 
 #endif //__QR_DATA_H
