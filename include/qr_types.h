@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <cstring>
 
 #define QR_MODE_NUM 0
 #define QR_MODE_ALPHA 1 
@@ -34,17 +35,17 @@ struct QrGroupStruct {
  */
 struct QrBlockStruct {
     uint8_t ecWordsPerBlock;
-    QrGroupStruct group1;
-    QrGroupStruct group2;
+    QrGroupStruct shortBlocks;
+    QrGroupStruct longBlocks;
 
     uint16_t dataWords() {
-        return group1.blockCount * group1.dataWordsPerBlock + group2.blockCount * group2.dataWordsPerBlock;
+        return shortBlocks.blockCount * shortBlocks.dataWordsPerBlock + longBlocks.blockCount * longBlocks.dataWordsPerBlock;
     }
     uint16_t totalWords() {
         return dataWords() + ecWords();
     }
     uint16_t ecWords() {
-        return (group1.blockCount + group2.blockCount) * ecWordsPerBlock;
+        return (shortBlocks.blockCount + longBlocks.blockCount) * ecWordsPerBlock;
     }
 };
 

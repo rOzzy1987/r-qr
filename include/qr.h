@@ -4,15 +4,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <cstring>
 #include "qr_types.h"
 #include "qr_data.h"
 #include "qr_gf256.h"
 #include "qr_render.h"
 #include "qr_rank.h"
 #include "qr_debug.h"
-
-
-
+#include "qr_encoder.h"
 
 class CQrGen {
     public:

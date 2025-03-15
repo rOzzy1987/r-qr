@@ -1,0 +1,23 @@
+{
+    "name": "R-QR",
+    "version": "1.0.0",
+    "description": "A low-resource, low-effort QR code generator library built without dependencies.",
+    "keywords": "qr-code, barcode, 2d-barcode",
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/rOzzy1987/rqr.git"
+    },
+    "authors":
+    [
+      {
+        "name": "Mihály Rozovits",
+        "email": "rozovits.mihal@gmail.com",
+        "url": "https://github.com/rOzzy1987"
+      }
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/rOzzy1987/rqr",
+    "frameworks": "*",
+    "platforms": "*"
+  }

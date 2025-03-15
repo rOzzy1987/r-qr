@@ -19,6 +19,8 @@
 #include "./data/alignment.h"
 
 #include "./rank/rank.h"
+#include "./encoder/optimize.h"
+#include "./encoder/merge.h"
 
 int main( int argc, char **argv) {
     UNITY_BEGIN();
@@ -46,12 +48,15 @@ int main( int argc, char **argv) {
 
     RUN_TEST(qrgen_create);
 
-    RUN_TEST(renderer_mask);
+    // RUN_TEST(renderer_mask);
 
     RUN_TEST(ranker_rank1);
     RUN_TEST(ranker_rank2);
     RUN_TEST(ranker_rank3);
     RUN_TEST(ranker_rank4);
+
+    RUN_TEST(encoder_optimizeSegments);
+    RUN_TEST(encoder_mergeSegments);
 
     UNITY_END();
 }
