@@ -4,18 +4,45 @@
 
 #include "../common.h"
 
-void qrgen_create() {
+struct CreateTestCase {
+    const char* data;
+    const uint8_t version;
+    const QrMode mode;
+    const QrEcc ecLevel;
+    const uint16_t expectedFormatPoly;
+    const uint8_t expectedMask;
+};
 
-    const uint8_t *exp = new uint8_t[44]{65, 118, 135, 71, 71, 7, 51, 162, 242, 247, 119, 119, 114, 231, 23, 38, 54, 246, 70, 82, 230, 54, 246, 210, 240, 236, 17, 236, 
-        /* EDC beginning here */ 52, 61, 242, 187, 29, 7, 216, 249, 103, 87, 95, 69, 188, 134, 57, 20};
-    QrCode *result = subject->create("https://www.qrcode.com/", 23, QrMode::Byte, QrEcc::M);
+CreateTestCase create_testCases[] = {
+    {"https://www.qrcode.com/", 1, QrMode::Byte, QrEcc::M, 0b101111001111100, 2},
+    {"https://www.qrcode.com/", 6, QrMode::Byte, QrEcc::M, 0b101111001111100, 2},
+    {"https://www.qrcode.com/", 10, QrMode::Unspecified, QrEcc::H, 0b101111001111100, 2},
+    
+};
 
-    print_qr(result);
-    print_bin(result->formatPoly);
+static void create_runTestCase(uint8_t n){
+    CreateTestCase tc = create_testCases[n];
+    
+    QrCode *r = QrGenerator.create(tc.data, strlen(tc.data), tc.mode, tc.ecLevel, tc.version);
+    
+    print_qr(r);
+    print_qr_details(r);
+    print_bin(r->formatPoly);
     printf("\n");
+    
+    ASSERT_EQ_UI8(tc.expectedMask, r->mask);
+    ASSERT_EQ_UI16(tc.expectedFormatPoly, r->formatPoly);
+    delete r;
+}
 
-    ASSERT_EQ_UI8(2, result->mask);
-    ASSERT_EQ_UI8A(exp, result->raw, result->rawSize);
-    ASSERT_EQ_UI16(0b101111001111100, result->formatPoly);
-    delete result;
+void qrgen_create_onlineExample() {
+    create_runTestCase(0);
+}
+
+void qrgen_create_forcedMultiBlock() {
+    create_runTestCase(1);
+}
+
+void qrgen_create_forcedMultiGroup() {
+    create_runTestCase(2);
 }

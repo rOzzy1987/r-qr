@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define QR_DEBUG
-
 #include "init.h"
 #include "mul_div.h"
 #include "genpoly.h"

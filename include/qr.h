@@ -23,8 +23,8 @@ class CQrGen {
          * @param ecLevel QR error correction level to use (default: QrEcc::L)
          * @return a QrCode object containing the encoded data and the rendered bitmap
          */
-        QrCode* create(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L){
-            QrCode *result = createRaw(data, length, mode, ecLevel);
+        QrCode* create(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L, uint8_t version = 40){
+            QrCode *result = createRaw(data, length, mode, ecLevel, version);
             setFormat(result);
             QrRenderer.render(result);
             QrRenderer.renderFormat(result);
@@ -41,34 +41,17 @@ class CQrGen {
          * @param ecLevel QR error correction level to use (default: QrEcc::L)
          * @return QrCode object
          */
-        QrCode* createRaw(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L) {
-            if (mode == QrMode::Unspecified)
-                mode = this->getMode(data, length);
-            uint8_t version = this->getVersion(length, mode, ecLevel);
+        QrCode* createRaw(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L, uint8_t version = 40) {
+            uint8_t *buff;
+            uint16_t dataLen;
+
+            buff = QrEncoder.encode(data, length, dataLen, version, mode, ecLevel);
             QrCode *result = new QrCode(version, ecLevel);
-
-            QrBlockStruct s = qr_blocks[version][ecLevel];
-            uint8_t *buff = new uint8_t[s.totalWords()];
-            memset(buff, 0, s.totalWords());
-            QrBufferCursor buffCur;
-            
-            addValue(buff, &buffCur, qr_mode_indicator[mode], 4);
-            addValue(buff, &buffCur, length, qr_lengthBits(version, mode));
-            addData(buff, &buffCur, data, length, mode);
-
-            addPadding(buff, &buffCur, s.dataWords());
-
-            uint16_t edcLen = 0;
-            uint8_t *edc = Gf256.getEdc(buff, buffCur.byte, s.totalWords(), edcLen);
-            memcpy(buff+buffCur.byte, edc, edcLen);
-            delete[] edc;
-
             result->raw = buff;
-            result->rawSize = buffCur.byte + edcLen;
+            result->rawSize = dataLen;
 
             return result;
         }
-
        
         /**
          * Sets the format information for a given QR code by mapping the error correction level 
@@ -140,182 +123,6 @@ class CQrGen {
             code->mask = mask;
             setFormat(code);
             QrRenderer.renderFormat(code);
-        }
-
-
-        /**
-         * Determines the most suitable QR mode for the given data based on its content.
-         * 
-         * This function analyzes the input data to identify the QR mode that can efficiently 
-         * encode it. It prioritizes the most restrictive mode that can represent the data 
-         * to ensure compactness. The function considers the following modes:
-         * - Numeric: If the data contains only digits (0-9).
-         * - Alphanumeric: If the data contains uppercase letters (A-Z), digits (0-9), and 
-         *   certain special characters (' ', '$', '%', '*', '+', '-', '.', '/', ':').
-         * - Byte: If the data contains characters that do not fit in the Numeric or 
-         *   Alphanumeric modes.
-         * 
-         * @param data A pointer to the raw data to analyze.
-         * @param length The length of the data.
-         * @return The most suitable QrMode (Numeric, AlphaNumeric, or Byte) for the data.
-         */
-
-        QrMode getMode(const char* data, uint16_t length) {
-            uint8_t modes = 0b111,
-                isAplha = 0;
-            for(uint16_t i = 0; i < length; i++){
-                uint8_t r = 0b100;
-                if (data[i] >= '0' && data[i] <= '9') r |= 0b011;
-                if (data[i] >= 'A' && data[i] <= 'Z') r |= 0b010;
-
-                isAplha = false;
-                for(uint8_t j = 0; j < 9; j++){
-                    if (qr_alphanum_chars[j] == data[i]) isAplha = true;
-                }
-                if (isAplha) r |= 0b010;
-
-                modes &= r;
-
-                if(modes == 4)
-                return QrMode::Byte;
-            }
-            if (modes & 1) return QrMode::Numeric;
-            if (modes & 2) return QrMode::AlphaNumeric;
-            return QrMode::Byte;
-        };
-        /**
-         * Gets the smallest suitable version for a given mode and length
-         * @returns 0-based version number (0-39)
-         */
-        uint8_t getVersion(uint16_t length, QrMode mode, QrEcc ecLevel){
-            for(uint8_t i = 0; i < 40; i++) {
-                if(qr_capacities[mode][i][ecLevel] > length) return i;
-            }
-            return 0xFF;
-        }
-
-        void addData(uint8_t *buff, QrBufferCursor *cursor, const char* data, uint16_t length, QrMode mode){
-            switch(mode) {
-                case QrMode::Numeric:
-                    return this->addDataNum(data, length, buff, cursor);
-                case QrMode::AlphaNumeric:
-                    return this->addDataAlpha(data, length, buff, cursor);
-                case QrMode::Byte:
-                    return this->addDataByte(data, length, buff, cursor);
-            }
-        }
-        void addDataNum(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
-            uint16_t i = 0;
-            uint16_t acc = 0;
-            while (i < length) {
-                acc = (acc*10)+(data[i] - '0');
-                i++;
-                if (i % 3 > 0) continue;
-
-                addValue(buff, cursor, acc, 10);
-                acc = 0;
-            } 
-            if (i%3 >0) {
-                uint8_t rem  = 3 - (i % 3);
-                for (uint8_t j = 0; j <rem; j++){
-                    acc = acc*10;
-                }
-                addValue(buff, cursor, acc, 10);
-            }
-        }
-        void addDataAlpha(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
-            uint16_t i = 0;
-            uint16_t acc = 0;
-            while (i < length) {
-                uint8_t d = 0;
-                if (data[i] >= '0' && data[i] <= '9')
-                    d = data[i] - '0';
-                else if (data[i] >= 'A' && data[i] <= 'Z')
-                    d = 10 + data[i] - 'A';
-                else {
-                    for(uint8_t j = 0;j < 9;j++) {
-                        if (qr_alphanum_chars[j] != data[i]) continue;
-                        d = 36 + j;
-                        j = 9;
-                    }
-                }
-                if (i & 1) 
-                    acc *= 45; 
-                acc += d;
-                i++;  
-                
-                if (i & 1) continue;
-                addValue(buff, cursor, acc, 11);
-
-                acc = 0;
-            } 
-            
-            if (i & 1) {
-                acc *= 45;
-                addValue(buff, cursor, acc, 11);
-            }
-
-        }
-        void addDataByte(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
-            uint16_t i = 0;
-            while (i < length) {
-                addValue(buff, cursor, data[i], 8);
-                i++;
-            } 
-        }
-        void addValue(uint8_t *buff, QrBufferCursor *cursor, uint16_t value, uint8_t bitLength) {
-            if (bitLength > 8){
-                addValue(buff, cursor, value >> 8, bitLength - 8);
-                addValue(buff, cursor, value & 0xFF, 8);
-                return;
-            }
-
-            int8_t sh = 8 - cursor->bit - bitLength;
-            if (sh >= 0){
-                buff[cursor->byte] |= value << sh;
-                cursor->bit += bitLength;
-            } else {
-                buff[cursor->byte] |= value >> (-sh);
-                cursor->bit = 0;
-                cursor->byte++;
-                
-                
-                buff[cursor->byte] |= value << (8+sh);
-                cursor->bit += -sh;
-            }
-
-            if (cursor->bit == 8) {
-                cursor->bit = 0;
-                cursor->byte++;
-            }
-        }
-    
-        /**
-         * Adds padding to the QR code data buffer to ensure it reaches the required length.
-         * 
-         * This function first adds a 4-bit terminator to the data buffer. If the current bit position
-         * within the current byte is not aligned (i.e., not zero), it pads the remaining bits of 
-         * the current byte with zeros to align to the next byte boundary. After that, it alternates 
-         * between adding the bytes 236 and 17 to the buffer until the buffer length reaches the specified 
-         * length 'len'. The padding helps ensure the QR code has a fixed size and is compliant with 
-         * specifications.
-         *
-         * @param buff Pointer to the buffer where the data is stored.
-         * @param cursor Pointer to the QrBufferCursor struct that tracks the current byte and bit position 
-         * in the buffer.
-         * @param len The length in bytes that the buffer should reach after padding.
-         */
-        void addPadding(uint8_t *buff, QrBufferCursor *cursor, uint16_t len){
-            addValue(buff,cursor,0,4);
-            if(cursor->bit != 0){
-                addValue(buff, cursor, 0, 8-cursor->bit);
-            }
-
-            uint8_t f = 0;
-            while(cursor->byte < len){
-                addValue(buff,cursor, f ? 17 : 236, 8);
-                f = !f;
-            }
         }
 };
 

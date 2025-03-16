@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#define QR_DEBUG
-
 #include "optimize.h"
 #include "merge-adjacent.h"
 #include "merge-by-size.h"
 #include "merge-least-painful.h"
+#include "simpletests.h"
+#include "bitman.h"
+#include "encode.h"
 
 int main( int argc, char **argv) {
     UNITY_BEGIN();
@@ -23,11 +24,9 @@ int main( int argc, char **argv) {
     RUN_TEST(encoder_mergeSegmentsBySize_nothingToMerge);
     RUN_TEST(encoder_mergeSegmentsBySize_singleElement);
 
-
     RUN_TEST(encoder_mergeLeastPainfulSegment_alphaPickedOverNumeric);
     RUN_TEST(encoder_mergeLeastPainfulSegment_sameLengthOverall);
     RUN_TEST(encoder_mergeLeastPainfulSegment_singleElement);
-
 
     RUN_TEST(encoder_optimizeSegments_simpleUtf8);
     RUN_TEST(encoder_optimizeSegments_3byte3modes);
@@ -36,6 +35,26 @@ int main( int argc, char **argv) {
     RUN_TEST(encoder_optimizeSegments_aBitMoreRandom);
     RUN_TEST(encoder_optimizeSegments_base64);
     RUN_TEST(encoder_optimizeSegments_moreThan1Kb);
+    
+    RUN_TEST(encoder_getMode_Byte);
+    RUN_TEST(encoder_getMode_Alpha);
+    RUN_TEST(encoder_getMode_Numeric);
+    RUN_TEST(encoder_getVersion_Numeric);
+    RUN_TEST(encoder_getVersion_Alpha);
+    RUN_TEST(encoder_getVersion_Byte);
+
+    RUN_TEST(encoder_addValue);
+    RUN_TEST(encoder_addDataNum);
+    RUN_TEST(encoder_addDataAlpha);
+    RUN_TEST(encoder_addDataByte);
+
+    RUN_TEST(encoder_encode_sameAsOnlineExample);
+    RUN_TEST(encoder_encode_uppercaseUrlAsAlpha);
+    RUN_TEST(encoder_encode_pureNumeric);
+    RUN_TEST(encoder_encode_highEcLevel);
+    RUN_TEST(encoder_encode_multisegment);
+    RUN_TEST(encoder_encode_multiBlockForcedVersion);
+    RUN_TEST(encoder_encode_multiGroupForcedVersion);
 
     UNITY_END();
 }

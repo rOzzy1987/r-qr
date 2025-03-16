@@ -54,11 +54,11 @@ static const OptimizeTestCase optimize_testCases[] = {
 static void test_optimizeSegments(int n) {
     OptimizeTestCase c = optimize_testCases[n];
 
-    printf("\n%s", c.data);
+    // printf("\n%s", c.data);
     uint8_t sl, v=20;
     QrDataSegment *segments = QrEncoder.optimizeSegments(c.data, strlen(c.data), v, sl);
-    printSegments(segments, sl, v);
-    // sanityCheckSegments(segments, sl);
+    // printSegments(segments, sl, v);
+    sanityCheckSegments(segments, sl);
     compareSegments(c.expected, c.expLen, segments, sl);
 }
 void encoder_optimizeSegments_simpleUtf8() {

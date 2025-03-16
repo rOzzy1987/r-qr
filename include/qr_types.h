@@ -131,29 +131,5 @@ struct QrBufferCursor {
     uint8_t bit = 0;
 };
 
-struct QrDataSegment {
-    uint16_t from = 0;
-    uint16_t to = 0;
-    QrMode mode = QrMode::Numeric;
-    QrDataSegment() {}
-    QrDataSegment(uint16_t from, uint16_t to, uint8_t mode){
-        QrDataSegment::from = from;
-        QrDataSegment::to = to;
-        QrDataSegment::mode = (QrMode)mode;
-    }
-    uint16_t getWordCount(uint8_t version){
-        return QrDataSegment::getWordCount(mode, version, to-from);
-    }
-    static uint16_t getWordCount(QrMode mode, uint8_t version, uint16_t length) {
-        uint16_t bits = 8, // mode bits + stop bits 
-            charsInUnit = qr_mode_charsPerUnit[mode];
-        bits += qr_lengthBits(version, mode);
-        bits += (length + charsInUnit - 1) 
-            * qr_mode_unitBitLength[mode] 
-            / charsInUnit; 
-        return (bits + 7) >> 3; // poor man's Math.ceil
-    }
-};
-
 
 #endif

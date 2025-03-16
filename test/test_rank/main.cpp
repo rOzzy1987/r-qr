@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define QR_DEBUG
-
 #include "rank.h"
 
 int main( int argc, char **argv) {

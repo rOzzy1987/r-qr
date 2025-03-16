@@ -18,9 +18,50 @@
 #define QR_OPTIMIZE_SEGMENTS
 
 
+
+struct QrDataSegment {
+    uint16_t from = 0;
+    uint16_t to = 0;
+    QrMode mode = QrMode::Numeric;
+    QrDataSegment() {}
+    QrDataSegment(uint16_t from, uint16_t to, uint8_t mode){
+        QrDataSegment::from = from;
+        QrDataSegment::to = to;
+        QrDataSegment::mode = (QrMode)mode;
+    }
+    uint16_t getWordCount(uint8_t version){
+        return QrDataSegment::getWordCount(mode, version, to-from);
+    }
+    static uint16_t getWordCount(QrMode mode, uint8_t version, uint16_t length) {
+        uint16_t bits = 8, // mode bits + stop bits 
+            charsInUnit = qr_mode_charsPerUnit[mode],
+            unitLength = qr_mode_unitBitLength[mode];
+        bits += qr_lengthBits(version, mode);
+        bits += ((length * unitLength) + charsInUnit - 1) 
+            / charsInUnit; 
+        return (bits + 7) >> 3; // poor man's Math.ceil(x/8)
+    }
+};
+
+#ifdef QR_DEBUG
+
+    void print_segments(const QrDataSegment *cs, uint8_t sl, uint8_t v){
+        printf("\n%d segments", sl);
+        QrDataSegment *s = (QrDataSegment*)cs;
+        uint16_t total = 0;
+        for (uint8_t i = 0; i < sl; i++){
+            QrMode m = s[i].mode;
+            total += s[i].getWordCount( v);
+            printf("\n(%3d - %3d): %5s (%3d)", s[i].from, s[i].to, m == 0 ? "Num" : m == 1 ? "Alpha" : "Byte", s[i].getWordCount(v));
+        }
+        printf("\n(total: %4d)\n", total);
+    }
+
+#endif
+
 class CQrEncoder{
     public:    
-    uint8_t* encode(const char* data, uint16_t length, uint8_t& version, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L) {
+    uint8_t* encode(const char* data, uint16_t length, uint16_t& resultLen, uint8_t& version, QrMode& mode, QrEcc ecLevel = QrEcc::L) {
         bool versionSet = version < 40;
         uint8_t segLength;
 
@@ -39,6 +80,7 @@ class CQrEncoder{
         uint16_t buffSize = s.totalWords(),
             dataWordsWritten = 0;
         uint8_t *buff = new uint8_t[buffSize];
+        memset(buff, 0, buffSize);
         uint8_t *currBuff = buff;
         QrBufferCursor cur = {0,0};
 
@@ -53,16 +95,20 @@ class CQrEncoder{
         cur = {0,0};
         addPaddingBytes(currBuff, &cur, s.dataWords() - dataWordsWritten);
 
-        splitBlob(buff, buffSize, s);
+        splitBlob(buff, dataWordsWritten, s);
         writeEdc(buff, s);
 
+        resultLen = buffSize;
         return buff;
     }
 
+#ifndef QR_TESTING
+    private:
+#endif
     void splitBlob(uint8_t *buff, uint16_t buffSize, QrBlockStruct s) {
         uint16_t 
-            iSrc = s.totalWords(),
-            iDst = buffSize;
+            iSrc = s.dataWords(),
+            iDst = s.totalWords();
         for(uint8_t i = 0; i < s.longBlocks.blockCount; i++){
             iSrc -= s.longBlocks.dataWordsPerBlock;
             iDst -= s.ecWordsPerBlock + s.longBlocks.dataWordsPerBlock;
@@ -70,6 +116,7 @@ class CQrEncoder{
                 buff[iDst + j] = buff[iSrc + j];
             }
         }
+        // the first data block is already in place
         for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
             iSrc -= s.shortBlocks.dataWordsPerBlock;
             iDst -= s.ecWordsPerBlock + s.shortBlocks.dataWordsPerBlock;
@@ -111,12 +158,15 @@ class CQrEncoder{
 
     uint8_t optimizeVersion(QrDataSegment *segments, uint8_t segLength, uint8_t version, QrEcc ecLevel) {
         QrBlockStruct s = qr_blocks[version][ecLevel];
-        if (getTotalWords(segments, segLength, version) < s.dataWords()){
+        uint16_t actualWords = getTotalWords(segments, segLength, version);
+        if (actualWords < s.dataWords()){
             while(true&& version > 0) {
                 s = qr_blocks[version - 1][ecLevel];
-                if (getTotalWords(segments, segLength, version - 1) >= s.dataWords())
+                actualWords = getTotalWords(segments, segLength, version - 1);
+                if (actualWords > s.dataWords()) {
                     return version;
-                    version--;
+                }
+                version--;
             }
             return 0;
         } 
@@ -131,7 +181,7 @@ class CQrEncoder{
     }
 
     uint16_t getTotalWords(QrDataSegment *segments, uint8_t length, uint8_t version){
-        uint16_t total;
+        uint16_t total = 0;
         for(uint8_t i = 0; i < length; i++){
             total += segments[i].getWordCount(version);
         }
@@ -140,13 +190,14 @@ class CQrEncoder{
 
     uint8_t getMinVersion(uint16_t length, QrMode mode, QrEcc ecLevel) {
         QrMode m = mode == QrMode::Unspecified ? QrMode::Byte : mode;
-            for(uint8_t v = 0; v < 40; v++){
-                if (qr_capacities[m][v][ecLevel] > length)
-                    return v;
-            } 
+        for(uint8_t v = 0; v < 40; v++){
+            if (qr_capacities[m][v][ecLevel] > length)
+                return v;
+        } 
+        return 39;
     }
 
-    QrDataSegment* getSegments(const char* data, uint16_t length, uint8_t& version, QrMode mode, uint8_t &segLength){
+    QrDataSegment* getSegments(const char* data, uint16_t length, uint8_t& version, QrMode& mode, uint8_t &segLength){
         QrDataSegment* seg = nullptr;;
     
         if (mode == QrMode::Unspecified) {

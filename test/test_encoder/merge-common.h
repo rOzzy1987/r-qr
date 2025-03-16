@@ -10,18 +10,6 @@ typedef struct  {
     uint8_t expectedLength;
 } MergeTestCase;
 
-void printSegments(const QrDataSegment *cs, uint8_t sl, uint8_t v){
-    printf("\n%d segments", sl);
-    QrDataSegment *s = (QrDataSegment*)cs;
-    uint16_t total = 0;
-    for (uint8_t i = 0; i < sl; i++){
-        QrMode m = s[i].mode;
-        total += s[i].getWordCount( v);
-        printf("\n(%3d - %3d): %5s (%3d)", s[i].from, s[i].to, m == 0 ? "Num" : m == 1 ? "Alpha" : "Byte", s[i].getWordCount( v));
-    }
-    printf("\n(total: %4d)\n", total);
-}
-
 void sanityCheckSegments(const QrDataSegment *s, uint8_t sl){
     for (uint8_t i = 0; i < sl; i++){
         ASSERT_NEQ_UI16(0, s[i].to - s[i].from );

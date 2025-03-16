@@ -34,18 +34,39 @@ void print_arr_f(const char* f, const uint16_t *arr, uint16_t len){
 
     printf("]");
 }
+void print_arr_f(const char* f, const uint8_t *arr, uint16_t len){
+    printf("\n(%d) [ ", len);
+    
+    for(uint16_t i = 0; i < len; i++){
+        printf(f, arr[i]);
+    }
+
+    printf("]");
+}
 
 void print_arr(const uint16_t *arr, uint16_t len){
     print_arr_f("%d, ", arr, len);
+} 
+void print_arr(const uint8_t *arr, uint16_t len){
+    print_arr_f("%d, ", arr, len);
 }
 
-// void print_arr_hex(const uint8_t *arr, uint16_t len){
-//     print_arr_f("%#02x, ", arr, len);
-// }
+void print_arr_hex(const uint8_t *arr, uint16_t len){
+    print_arr_f("%#02x, ", arr, len);
+}
 
 void print_cursor(QrBufferCursor *c) {
     printf("\n{%d:%d}", c->byte, c->bit);
 }
+
+void print_qr_details(QrCode *code){
+    printf("\n----------------\nQR code details:");
+    printf("\nversion:       %5d", code->version);
+    printf("\nsize:          %5d", code->size);
+    printf("\nEcc level:     %5d", code->ecLevel);
+    printf("\nMask:          %5d", code->mask);
+}
+
 
 
 
