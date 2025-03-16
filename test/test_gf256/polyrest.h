@@ -1,7 +1,5 @@
 #include "../common.h"
 
-#define min(a,b) (a>b) ? (b) : (a)
-
 static void test_rest(const uint8_t *a, const uint16_t al, const uint8_t *b, const uint16_t bl, const uint8_t *ref) {
     uint8_t r[bl-1];
     uint16_t rl;

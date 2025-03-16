@@ -5,216 +5,316 @@
 #include "qr_types.h"
 #include "qr_data.h"
 
-#define min(a,b) (a) > (b) ? (b) : (a)
-#define max(a,b) (a) > (b) ? (a) : (b)
+#ifndef QR_MIN_F
+#define QR_MIN_F
+#define min(a,b) ((a) > (b) ? (b) : (a))
+#endif // QR_MIN_F
 
-struct QrDataSegment {
-    uint16_t from = 0;
-    uint16_t to = 0;
-    QrMode mode = QrMode::Numeric;
-    QrDataSegment() {}
-    QrDataSegment(uint16_t from, uint16_t to, uint8_t mode){
-        QrDataSegment::from = from;
-        QrDataSegment::to = to;
-        QrDataSegment::mode = (QrMode)mode;
-    }
-};
+#ifndef QR_MAX_F
+#define QR_MAX_F
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#endif // QR_MAX_F
+
+#define QR_OPTIMIZE_SEGMENTS
+
 
 class CQrEncoder{
-    public:
-    bool optimize = true;
+    public:    
+    uint8_t* encode(const char* data, uint16_t length, uint8_t& version, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L) {
+        bool versionSet = version < 40;
+        uint8_t segLength;
 
-    uint8_t* encode(const char* data, uint16_t length, QrEcc ecLevel = QrEcc::L, QrMode mode = QrMode::Unspecified, uint8_t version = 0xFF) {
+        if (!versionSet) {
+            // get a version that definitely fits
+            version = getMinVersion(length, mode, ecLevel);
+        }
+
+        QrDataSegment* seg = getSegments(data, length, version, mode, segLength);
+
+        if (!versionSet) {
+            version = optimizeVersion(seg, segLength, version, ecLevel);
+        }
+
         QrBlockStruct s = qr_blocks[version][ecLevel];
+        uint16_t buffSize = s.totalWords(),
+            dataWordsWritten = 0;
+        uint8_t *buff = new uint8_t[buffSize];
+        uint8_t *currBuff = buff;
+        QrBufferCursor cur = {0,0};
 
-        uint8_t *buff = new uint8_t[s.totalWords()];
-        QrBufferCursor cur;
-        QrDataSegment* seg = nullptr;
-        uint8_t segL;
+
+        for(uint8_t i = 0; i < segLength; i++){
+            cur = {0,0};
+            writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, currBuff, &cur, version, mode);
+            currBuff += cur.byte;
+            dataWordsWritten += cur.byte;
+        }
+        // Add padding to specified length
+        cur = {0,0};
+        addPaddingBytes(currBuff, &cur, s.dataWords() - dataWordsWritten);
+
+        splitBlob(buff, buffSize, s);
+        writeEdc(buff, s);
+
+        return buff;
+    }
+
+    void splitBlob(uint8_t *buff, uint16_t buffSize, QrBlockStruct s) {
+        uint16_t 
+            iSrc = s.totalWords(),
+            iDst = buffSize;
+        for(uint8_t i = 0; i < s.longBlocks.blockCount; i++){
+            iSrc -= s.longBlocks.dataWordsPerBlock;
+            iDst -= s.ecWordsPerBlock + s.longBlocks.dataWordsPerBlock;
+            for(int16_t j = s.longBlocks.dataWordsPerBlock; j >= 0; j--){
+                buff[iDst + j] = buff[iSrc + j];
+            }
+        }
+        for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
+            iSrc -= s.shortBlocks.dataWordsPerBlock;
+            iDst -= s.ecWordsPerBlock + s.shortBlocks.dataWordsPerBlock;
+            for(int16_t j = s.shortBlocks.dataWordsPerBlock; j >= 0; j--){
+                buff[iDst + j] = buff[iSrc + j];
+            }
+        }
+    }
+
+    void writeSegmentData(const char* data, uint16_t dataLen, uint8_t *buff, QrBufferCursor *cur, uint8_t version, QrMode mode){
+        addValue(buff, cur, qr_mode_indicator[mode], 4);
+        addValue(buff, cur, dataLen, qr_lengthBits(version, mode));
+        addData(buff, cur, data, dataLen, mode);
+        addStopBitsAndPad(buff, cur);
+    }
+
+    void writeEdc(uint8_t *buff, QrBlockStruct s){
+        uint16_t cur, dataWords = s.shortBlocks.dataWordsPerBlock,
+        blockWords = dataWords + s.ecWordsPerBlock;
+        for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
+            uint16_t edcLen = 0;
+
+            uint8_t *edc = Gf256.getEdc(buff, dataWords, blockWords, edcLen);
+            memcpy(buff + dataWords, edc, edcLen);
+            delete[] edc;
+            buff += blockWords;
+        }
+        dataWords = s.longBlocks.dataWordsPerBlock;
+        blockWords = dataWords + s.ecWordsPerBlock;
+        for(uint8_t i = 0; i < s.longBlocks.blockCount; i++){
+            uint16_t edcLen = 0;
+
+            uint8_t *edc = Gf256.getEdc(buff, dataWords, blockWords, edcLen);
+            memcpy(buff + dataWords, edc, edcLen);
+            delete[] edc;
+            buff += blockWords;
+        }
+    }
+
+    uint8_t optimizeVersion(QrDataSegment *segments, uint8_t segLength, uint8_t version, QrEcc ecLevel) {
+        QrBlockStruct s = qr_blocks[version][ecLevel];
+        if (getTotalWords(segments, segLength, version) < s.dataWords()){
+            while(true&& version > 0) {
+                s = qr_blocks[version - 1][ecLevel];
+                if (getTotalWords(segments, segLength, version - 1) >= s.dataWords())
+                    return version;
+                    version--;
+            }
+            return 0;
+        } 
+
+        while( version < 39) {
+            version++;
+            s = qr_blocks[version][ecLevel];
+            if (getTotalWords(segments, segLength, version) <= s.dataWords())
+                return version;
+        }
+        return 39;
+    }
+
+    uint16_t getTotalWords(QrDataSegment *segments, uint8_t length, uint8_t version){
+        uint16_t total;
+        for(uint8_t i = 0; i < length; i++){
+            total += segments[i].getWordCount(version);
+        }
+        return total;
+    }
+
+    uint8_t getMinVersion(uint16_t length, QrMode mode, QrEcc ecLevel) {
+        QrMode m = mode == QrMode::Unspecified ? QrMode::Byte : mode;
+            for(uint8_t v = 0; v < 40; v++){
+                if (qr_capacities[m][v][ecLevel] > length)
+                    return v;
+            } 
+    }
+
+    QrDataSegment* getSegments(const char* data, uint16_t length, uint8_t& version, QrMode mode, uint8_t &segLength){
+        QrDataSegment* seg = nullptr;;
     
         if (mode == QrMode::Unspecified) {
-            if(optimize) {
-                seg = optimizeSegments(data, length, 12, segL);
-            } else {
+#ifdef QR_OPTIMIZE_SEGMENTS
+                seg = optimizeSegments(data, length, version, segLength);
+                mode = segLength == 1 ? seg[0].mode : QrMode::Mixed;
+#else
                 mode = getMode(data,length);
-            }
+#endif
         }
         if(seg == nullptr){
             seg = new QrDataSegment[1];
             seg->from = 0;
             seg->to = length;
             seg->mode = mode;
+            segLength = 1;
         }
-
-        for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
-
-        }
-        return nullptr;
+        return seg;
     }
 
-    QrDataSegment* optimizeSegments(const char* data, uint16_t length, uint8_t version, uint8_t& resultLength) {
+#ifdef QR_OPTIMIZE_SEGMENTS
+    /**
+     * Optimizes the segments used to encode the given data.
+     * The algorithm works by starting with one segment for each character and then merging adjacent segments
+     * that can be represented by a more compact mode. At the end, the segments are merged again to reduce the 
+     * number of segments.
+     * @param data the data to encode
+     * @param length the length of the data
+     * @param version the version of the QR code (ma be modified)
+     * @param resultLength the number of segments returned
+     * @return an array of segments
+     */
+    QrDataSegment* optimizeSegments(const char* data, uint16_t length, uint8_t& version, uint8_t& resultLength) {
         const uint8_t maxSegments = 128;
         QrDataSegment* segments = new QrDataSegment[maxSegments];
 
+        // Initialize the first segment
         segments[0].from = 0;
-        segments[0].mode = getMode(data[0]);
-
+        segments[0].to = 0;
+        segments[0].mode =  length == 0 ? QrMode::Numeric : getMode(data[0]);
+        resultLength = 1;
         uint8_t segmentIndex = 0;
+
+        // Iterate over the data
         for (uint16_t i = 1; i < length; i++) {
+            segments[segmentIndex].to = i;
+            // Get the mode of the current character
             QrMode mode = getMode(data[i]);
+
+            // If the mode is different from the previous segment, create a new segment
             if (segments[segmentIndex].mode != mode) {
+                // Check if we have enough space for another segment
                 if (segmentIndex == maxSegments - 1) {
-                    mergeSegments(segments, maxSegments, version, segmentIndex);
+                    // If not, merge the segments to free up space
+                    mergeSegmentsBySize(segments, resultLength, version);
+                    segmentIndex = resultLength - 1;
+                    // If we still don't have enough space, merge the smallest segment
                     if (segmentIndex == maxSegments - 1) {
-                        mergeSmallestSegment(segments, maxSegments, segmentIndex);
+                        mergeLeastPainfulSegment(segments, resultLength, version);
+                        segmentIndex = resultLength - 1;
                         // WTF? 128 segments and nothing to merge? Get out of here....
+                        // If we still don't have enough space, we can't do anything else
+                        // except for return a failure code. But we don't do that yet.
                     }    
-                    i--; // Retry after merging;
+                    // Retry the loop with the new segment
+                    i--; 
                 } else {
+                    // If we have enough space, just create a new segment
                     segmentIndex++;
+                    resultLength = segmentIndex + 1;
                     segments[segmentIndex].from = i;
                     segments[segmentIndex].mode = mode;
                 }
             }
-            segments[segmentIndex].to = i + 1;
         }
+        segments[resultLength-1].to = length;
 
-        mergeSegments(segments, maxSegments, version, segmentIndex);
-        resultLength = segmentIndex + 1;
+        // Merge the segments one last time
+        mergeSegmentsBySize(segments, resultLength, version);
+
+        // Return the segments
         return segments;
     }
-
-    /**
- * Merges the smallest segment that has a less compact mode with its adjacent segments.
- * After merging, adjacent segments with the same mode are also merged. 
- * This operation reduces the size of segments by at most 2.
- * @param segments array of segments to merge
- * @param len the length of the segments array
- * @param lastIdx the index of the last active element after the merge.
- */
-void mergeSmallestSegment(QrDataSegment *segments, uint8_t len, uint8_t &lastIdx) {
-    uint8_t minIndex = 0, smallestSize = segments[0].to - segments[0].from;
-    QrMode minMode = segments[0].mode;
-
-    // Find the smallest segment with a neighbor of less compact mode
-    for (uint8_t i = 0; i < len; ++i) {
-        bool canMerge = (i > 0 && segments[i - 1].mode > segments[i].mode) ||
-                        (i < len - 1 && segments[i + 1].mode > segments[i].mode);
-
-        if (!canMerge) continue;
-
-        uint8_t currentSize = segments[i].to - segments[i].from;
-        QrMode currentMode = segments[i].mode;
-
-        if (currentMode < minMode || (currentMode == minMode && currentSize < smallestSize)) {
-            minIndex = i;
-            smallestSize = currentSize;
-            minMode = currentMode;
-        }
-    }
-
-    // Merge the smallest segment with its adjacent one
-    if (minIndex > 0) {
-        segments[minIndex - 1].to = segments[minIndex].to;
-        for (uint8_t i = minIndex; i < len - 1; ++i) {
-            segments[i] = segments[i + 1];
-        }
-        len--;
-    } else if (minIndex < len - 1) {
-        segments[minIndex + 1].from = segments[minIndex].from;
-        for (uint8_t i = minIndex; i < len - 1; ++i) {
-            segments[i] = segments[i + 1];
-        }
-        len--;
-    }
-
-    // Merge adjacent segments with the same mode
-    for (uint8_t i = 0; i < len - 1; ++i) {
-        if (segments[i].mode == segments[i + 1].mode) {
-            segments[i + 1].from = segments[i].from;
-            for (uint8_t j = i; j < len - 1; ++j) {
-                segments[j] = segments[j + 1];
-            }
-            len--;
-        }
-    }
-
-    lastIdx = len - 1;
-}
-
     
-/**
- * Merges adjacent QR data segments if combining them results in a lower
- * word count than encoding them separately. This function iterates 
- * through the given segments and checks if merging two consecutive 
- * segments results in fewer words for the QR code. If so, it merges 
- * them into a single segment, adjusts the array, and updates the new 
- * length of the segments array.
- *
- * @param segments The array of QR data segments to be merged.
- * @param len The initial length of the segments array.
- * @param version The QR version number (0-based).
- * @param lastIdx the index of thelast active element after the merge.
- */
+    /**
+     * Merges the segment that will have the least negative impact on overall size with its adjacent one
+     * @param segments pointer to the segments array
+     * @param segmentCount the length of the segments array
+     * @param version the QR code version
+     */
+    void mergeLeastPainfulSegment(QrDataSegment *segments, uint8_t& segmentCount, uint8_t version) {
+        if (segmentCount == 1) return;
+        int16_t minScore = 0x7FFF;
+        uint8_t i, minSegmentIndex = 1;
+        uint16_t prevSegmentLength, prevSegmentSize, 
+            currSegmentLength = segments->to - segments->from, 
+            currSegmentSize = segments[0].getWordCount(version);
 
-    void mergeSegments(QrDataSegment *segments, uint8_t len, uint8_t version, uint8_t &lastIdx) {
-        // Merge adjacent segments if combining them results in fewer words
-        for (uint8_t i = 1; i < lastIdx; ++i) {
-            QrDataSegment *prev = &segments[i - 1];
-            QrDataSegment *cur = &segments[i];
+        // Find the segment with the least negative impact on overall size
+        for (i = 1; i < segmentCount; ++i) {
+            prevSegmentLength = currSegmentLength;
+            prevSegmentSize = currSegmentSize;
+            currSegmentLength = segments[i].getWordCount(version);
+            currSegmentSize = segments[i].to - segments[i].from;
 
-            if (getSegmentWordCount(prev, version) + getSegmentWordCount(cur, version) >=
-                getSegmentWordCount(max(prev->mode, cur->mode), version, (prev->to - prev->from) + (cur->to - cur->from))) {
-                prev->to = cur->to;
+            int score = QrDataSegment::getWordCount(
+                max(segments[i-1].mode, segments[i].mode),
+                version,
+                prevSegmentLength + currSegmentLength
+            ) - prevSegmentSize + currSegmentSize;
 
-                // Remove the current segment and shift the rest
-                for (uint8_t j = i; j < lastIdx - 1; ++j) {
+            if (score < minScore) {
+                minSegmentIndex = i;
+            }
+        }
+
+        // Merge the segment with its adjacent one
+        segments[minSegmentIndex].from = segments[minSegmentIndex - 1].from;
+        segments[minSegmentIndex].mode = max(
+            segments[minSegmentIndex -1].mode,
+            segments[minSegmentIndex].mode
+        );
+
+        // Shift the other segments
+        for (i = minSegmentIndex; i < segmentCount; ++i) {
+            segments[minSegmentIndex -1] = segments[minSegmentIndex];
+        }
+        segmentCount--;
+        mergeAdjacentSegments(segments, segmentCount);
+    }
+    
+    void mergeAdjacentSegments(QrDataSegment *segments, uint8_t &segmentCount) {
+        for (uint8_t i = 0; i < segmentCount - 1; ++i) {
+            if (segments[i].mode == segments[i + 1].mode) {
+                segments[i + 1].from = segments[i].from;
+                for (uint8_t j = i; j < segmentCount - 1; ++j) {
                     segments[j] = segments[j + 1];
                 }
-                lastIdx--;
-                --i;
+                segmentCount--;
+                i--;
             }
         }
     }
 
+    void mergeSegmentsBySize(QrDataSegment *segments, uint8_t& segmentCount, uint8_t version) {
+        for (uint8_t index = 1; index < segmentCount; ++index) {
+            QrDataSegment *previousSegment = &segments[index - 1];
+            QrDataSegment *currentSegment = &segments[index];
 
-/**
- * Calculates the word count needed for a QR segment.
- *
- * This is a convenience method that uses the segment's mode and length
- * to calculate the word count required for the segment.
- *
- * @param segment The QR segment for which to calculate the word count.
- * @param version The QR version number (0-based).
- * @return The number of words required to encode the segment.
- */
-    uint16_t getSegmentWordCount(QrDataSegment *segment, uint8_t version) {
-        return getSegmentWordCount(segment->mode, version, segment->to - segment->from);
+            uint16_t combinedLength = (previousSegment->to - previousSegment->from) + (currentSegment->to - currentSegment->from);
+            QrMode optimalMode = max(previousSegment->mode, currentSegment->mode);
+
+            uint16_t separateWordCount = previousSegment->getWordCount(version) + currentSegment->getWordCount(version);
+            uint16_t mergedWordCount = QrDataSegment::getWordCount(optimalMode, version, combinedLength);
+
+            if (separateWordCount >= mergedWordCount) {
+                previousSegment->to = currentSegment->to;
+                previousSegment->mode = optimalMode;
+
+                for (uint8_t shiftIndex = index; shiftIndex < segmentCount - 1; ++shiftIndex) {
+                    segments[shiftIndex] = segments[shiftIndex + 1];
+                }
+                segmentCount--;
+                --index;
+            }
+        }
     }
-
-/**
- * Calculates the word count needed for a QR segment.
- *
- * This function calculates the number of words required to encode
- * a QR data segment based on the given mode, version, and length
- * of the segment. It takes into account the mode bits, length bits,
- * and the number of units required for the specified length.
- *
- * @param mode The QR mode for the segment (e.g., Numeric, Alphanumeric, Byte).
- * @param version The QR version number (0-based).
- * @param length The length of the segment in characters.
- * @return The number of words required to encode the segment.
- */
-
-    uint16_t getSegmentWordCount(QrMode mode, uint8_t version, uint16_t length) {
-        uint16_t bits = 8, // mode bits + stop bits 
-            charsInUnit = qr_mode_charsPerUnit[mode];
-        bits += qr_lengthBits(version, mode);
-        bits += (length + charsInUnit - 1) 
-            * qr_mode_unitBitLength[mode] 
-            / charsInUnit; 
-        return (bits + 7) >> 3; // poor man's Math.ceil
-    }
+#endif // QR_OPTIMIZE_SEGMENTS
 
 /**
  * Determines the optimal QR mode for a given string of characters.
@@ -229,20 +329,16 @@ void mergeSmallestSegment(QrDataSegment *segments, uint8_t len, uint8_t &lastIdx
  * @return The optimal QrMode for the given string.
  */
     QrMode getMode(const char* data, uint16_t length) {
-        QrMode 
-            mode =  QrMode::Numeric,
-            other;
-        uint8_t isAplha = 0;
-        for(uint16_t i = 0; i < length; i++){
-            other = getMode(data[i]);
-
-            mode = max(mode, other);
-
-            if(mode == QrMode::Byte)
+        QrMode optimalMode = QrMode::Numeric;
+        for (uint16_t i = 0; i < length; ++i) {
+            QrMode currentMode = getMode(data[i]);
+            if (currentMode == QrMode::Byte) {
                 return QrMode::Byte;
+            }
+            optimalMode = max(optimalMode, currentMode);
         }
-        return mode;
-    };
+        return optimalMode;
+    }
 
 /**
  * Determines the QR mode for a single character.
@@ -257,18 +353,25 @@ void mergeSmallestSegment(QrDataSegment *segments, uint8_t len, uint8_t &lastIdx
  * @return The corresponding QrMode for the character.
  */
 
-    QrMode getMode(char c){
-        
-        if (c >= '0' && c <= '9') return QrMode::Numeric;
-        if (c >= 'A' && c <= 'Z') return QrMode::AlphaNumeric;
+    QrMode getMode(char c) {
+        // Check for numeric characters
+        if (c >= '0' && c <= '9') {
+            return QrMode::Numeric;
+        }
 
-        bool isAplha = false;
-        for(uint8_t j = 0; j < 9; j++){
-            if (qr_alphanum_chars[j] == c) {
+        // Check for alphanumeric characters
+        if (c >= 'A' && c <= 'Z') {
+            return QrMode::AlphaNumeric;
+        }
+
+        // Check for special alphanumeric characters
+        for (uint8_t i = 0; i < 9; ++i) {
+            if (qr_alphanum_chars[i] == c) {
                 return QrMode::AlphaNumeric;
             }
         }
-        
+
+        // Default to byte mode
         return QrMode::Byte;
     }
 
@@ -368,29 +471,16 @@ void mergeSmallestSegment(QrDataSegment *segments, uint8_t len, uint8_t &lastIdx
         }
     }
 
-    /**
-     * Adds padding to the QR code data buffer to ensure it reaches the required length.
-     * 
-     * This function first adds a 4-bit terminator to the data buffer. If the current bit position
-     * within the current byte is not aligned (i.e., not zero), it pads the remaining bits of 
-     * the current byte with zeros to align to the next byte boundary. After that, it alternates 
-     * between adding the bytes 236 and 17 to the buffer until the buffer length reaches the specified 
-     * length 'len'. The padding helps ensure the QR code has a fixed size and is compliant with 
-     * specifications.
-     *
-     * @param buff Pointer to the buffer where the data is stored.
-     * @param cursor Pointer to the QrBufferCursor struct that tracks the current byte and bit position 
-     * in the buffer.
-     * @param len The length in bytes that the buffer should reach after padding.
-     */
-    void addPadding(uint8_t *buff, QrBufferCursor *cursor, uint16_t len){
+    
+    void addStopBitsAndPad(uint8_t *buff, QrBufferCursor *cursor){
         addValue(buff,cursor,0,4);
         if(cursor->bit != 0){
             addValue(buff, cursor, 0, 8-cursor->bit);
         }
-
+    }
+    void addPaddingBytes(uint8_t *buff, QrBufferCursor *cursor, uint16_t length){
         uint8_t f = 0;
-        while(cursor->byte < len){
+        while(cursor->byte < length){
             addValue(buff,cursor, f ? 17 : 236, 8);
             f = !f;
         }
