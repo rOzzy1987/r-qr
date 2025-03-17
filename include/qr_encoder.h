@@ -91,8 +91,8 @@ class CQrEncoder{
         addPaddingBytes(currBuff, &cur, s.dataWords() - dataWordsWritten);
 
         splitBlob(buff, dataWordsWritten, s);
-        mixBlocks(buff, buffSize, s);
         writeEdc(buff, s);
+        mixBlocks(buff, buffSize, s);
 
         resultLen = buffSize;
         return buff;
@@ -143,7 +143,6 @@ class CQrEncoder{
             
         uint8_t temp[tbc];
         
-        printf("\nlbc:%d lbl:%d sbc:%d sbl:%d", lbc, lbl, sbc, sbl);
         for (uint16_t i0 = 0; i0 < obl - 1; i0++) {
             // get a batch of values
             for(uint16_t i1 = 0; i1 < tbc; i1++) {
