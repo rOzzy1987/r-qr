@@ -5,6 +5,7 @@
 #include "simpletests.h"
 #include "bitman.h"
 #include "encode.h"
+#include "mix.h"
 
 int main( int argc, char **argv) {
     UNITY_BEGIN();
@@ -25,9 +26,10 @@ int main( int argc, char **argv) {
     RUN_TEST(encoder_encode_uppercaseUrlAsAlpha);
     RUN_TEST(encoder_encode_pureNumeric);
     RUN_TEST(encoder_encode_highEcLevel);
-    RUN_TEST(encoder_encode_multisegment);
-    RUN_TEST(encoder_encode_multiBlockForcedVersion);
-    RUN_TEST(encoder_encode_multiGroupForcedVersion);
+
+    RUN_TEST(encoder_mix_simpleMultiBlock);
+    RUN_TEST(encoder_mix_simpleMultiGroup);
+    RUN_TEST(encoder_mix_singleBlock);
 
     UNITY_END();
 }

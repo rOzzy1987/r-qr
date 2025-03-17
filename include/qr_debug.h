@@ -24,6 +24,12 @@ void print_bin(uint16_t v){
     printf("\n" BTBF, BTB(v >> 8));
     printf(" " BTBF, BTB(v & 0xFF));
 }
+void print_bin(uint32_t v){
+    printf("\n" BTBF, BTB(v >> 24));
+    printf(" " BTBF, BTB((v >> 16) & 0xFF));
+    printf(" " BTBF, BTB((v >> 8) & 0xFF));
+    printf(" " BTBF, BTB(v & 0xFF));
+}
 
 void print_arr_f(const char* f, const uint16_t *arr, uint16_t len){
     printf("\n(%d) [ ", len);
@@ -126,7 +132,7 @@ void print_qr_details(QrCode *code){
 void print_qr(QrCode *code) {
     for(uint16_t y = 0; y< 4; y++) {
         printf("\n");
-        for (uint16_t x = 0; x < code->size + (APL << 3); x++){
+        for (uint16_t x = 0; x < (code->bitmapStride << 3) + (APL << 2); x++){
             printf(APW);
         }
     }
@@ -139,7 +145,7 @@ void print_qr(QrCode *code) {
     }
     for(uint16_t y = 0; y< 4; y++) {
         printf("\n");
-        for (uint16_t x = 0; x < code->size + (APL << 3); x++){
+        for (uint16_t x = 0; x < (code->bitmapStride << 3) + (APL << 2); x++){
             printf(APW);
         }
     }

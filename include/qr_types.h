@@ -106,6 +106,12 @@ struct QrCode {
      * since it only contains 1s and 0s, we can just use an int and do operations bitwise 
      */
     uint16_t formatPoly;
+
+    /**
+     * version polymonial
+     * Only comes into play once version (0 based) is larger than 5
+     */
+    uint32_t versionPoly;
     
     QrCode(uint8_t version, uint8_t ecLevel){
         this->version = version;
@@ -119,6 +125,7 @@ struct QrCode {
         memset(bitmap, 0, bitmapSize);
 
         this->formatPoly = 0;
+        this->versionPoly = 0;
         this->raw = nullptr;
         this->rawSize = 0;
     }

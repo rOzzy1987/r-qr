@@ -13,12 +13,19 @@ class CQrRenderer {
             applyMask(code, code->mask);
         }
 
-        void renderFormat(QrCode *code){
-            // s: 21
-            // i:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
-            // X:  0  1  2  3  4  5  7 13 14 15 16 17 18 19 20 
-            // Y: 20 19 18 17 16 15 14  8  7  5  4  3  2  1  0
+        void renderVersion(QrCode *code) {
+            if (code->version < 6) return;
+            for(uint8_t i = 0; i < 17; i++){
+                uint8_t 
+                    x = (i % 3) + (code->size - 11),
+                    y = i / 3,
+                    v = (uint8_t)((code->versionPoly >> i) & 1);
+                setPixel(code, x, y, v);
+                setPixel(code, y, x, v);
+            }
+        }
 
+        void renderFormat(QrCode *code){
             for(uint8_t i = 0; i < 15; i++){
                 uint8_t 
                     s = code->size,

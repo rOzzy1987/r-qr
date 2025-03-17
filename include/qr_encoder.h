@@ -91,6 +91,7 @@ class CQrEncoder{
         addPaddingBytes(currBuff, &cur, s.dataWords() - dataWordsWritten);
 
         splitBlob(buff, dataWordsWritten, s);
+        mixBlocks(buff, buffSize, s);
         writeEdc(buff, s);
 
         resultLen = buffSize;
@@ -118,6 +119,69 @@ class CQrEncoder{
             for(int16_t j = s.shortBlocks.dataWordsPerBlock; j >= 0; j--){
                 buff[iDst + j] = buff[iSrc + j];
             }
+        }
+    }
+
+    void mixBlocks(uint8_t *buff, uint16_t buffSize, QrBlockStruct str){
+        uint16_t 
+            sbc = str.shortBlocks.blockCount,
+            lbc = str.longBlocks.blockCount,
+            tbc = sbc+lbc,
+            sbl = str.shortBlocks.dataWordsPerBlock + str.ecWordsPerBlock,
+            lbl = str.longBlocks.dataWordsPerBlock + str.ecWordsPerBlock,
+            obl;
+
+        if (tbc < 2) return;
+
+        if (sbc > 0 && lbc == 0){
+            lbc = sbc;
+            sbc = 0;
+            lbl = sbl;
+            sbl = 0;
+        }
+        obl = lbl;
+            
+        uint8_t temp[tbc];
+        
+        printf("\nlbc:%d lbl:%d sbc:%d sbl:%d", lbc, lbl, sbc, sbl);
+        for (uint16_t i0 = 0; i0 < obl - 1; i0++) {
+            // get a batch of values
+            for(uint16_t i1 = 0; i1 < tbc; i1++) {
+                uint16_t i2 = i1 * lbl;
+                if (i1 >= lbc)
+                    i2 -= i1 - lbc;
+                temp[i1] = buff[i2]; 
+                buff[i2] = 0;
+            }
+
+            // shift to eliminate 'empty' spaces
+            sbl = sbl > 0 ? sbl - 1 : 0;
+            lbl = lbl > 0 ? lbl - 1 : 0;
+            int16_t p = buffSize - 1;
+            uint8_t sh = 0;
+
+            for (uint8_t i1 = 0; i1 < sbc; i1++){
+                for (uint8_t i2 = 0; i2 < sbl; i2++){
+                    if (sh)
+                        buff[p] = buff[p-sh];
+                    p--;
+                }
+                sh++;
+            }
+            for (uint8_t i1 = 0; i1 < lbc; i1++){
+                for (uint8_t i2 = 0; i2 < lbl; i2++){
+                    if (sh)
+                        buff[p] = buff[p-sh];
+                    p--;
+                }
+                sh++;
+            }
+
+            // write back temp to buff
+            memcpy(buff, temp, tbc);
+
+            buff += tbc;
+            buffSize -= tbc;
         }
     }
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "encode.h"
 #include "optimize.h"
 #include "merge-adjacent.h"
 #include "merge-by-size.h"
@@ -32,6 +33,15 @@ int main( int argc, char **argv) {
     RUN_TEST(encoder_optimizeSegments_aBitMoreRandom);
     RUN_TEST(encoder_optimizeSegments_base64);
     RUN_TEST(encoder_optimizeSegments_moreThan1Kb);
+
+    
+    RUN_TEST(encoder_encode_sameAsOnlineExample);
+    RUN_TEST(encoder_encode_uppercaseUrlAsAlpha);
+    RUN_TEST(encoder_encode_pureNumeric);
+    RUN_TEST(encoder_encode_highEcLevel);
+    RUN_TEST(encoder_encode_multisegment);
+    RUN_TEST(encoder_encode_multiBlockForcedVersion);
+    RUN_TEST(encoder_encode_multiGroupForcedVersion);
 
     UNITY_END();
 }

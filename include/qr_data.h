@@ -423,6 +423,7 @@ uint8_t *qr_alignment_factors(uint8_t v, uint8_t &n) {
 
 const uint16_t qr_format_divisor = 0b10100110111;
 const uint16_t qr_format_mask = 0b101010000010010;
+const uint32_t qr_version_divisor = 0b1111100100101;
 
 
 #endif //__QR_DATA_H
