@@ -43,13 +43,13 @@ class CQrRenderer {
                 B = 0,
                 b = 0,
                 s = code->size,
-                x = code->size - 1,
-                y = code->size - 1,
+                x = s - 1,
+                y = x,
                 al = 0,
                 *af = qr_alignment_factors(code->version, al);
 
             while(B < code->rawSize && x < s && y < s) {
-                uint8_t p = isProtected(code, x,y, af,al);
+                uint8_t p = isProtected(code, x,y, af,al) || isVersionInfo(code, x, y);
                 
                 if (p == 0){
                     setPixel(code, x,y,(code->raw[B] & (1 << (7 - b))));
@@ -111,10 +111,11 @@ class CQrRenderer {
 
             for(uint8_t y = 0; y< code->size; y++) {
                 for (uint8_t x= 0; x< code->size; x++) {
-                    if(isProtected(code, x,y,af,al)) continue;
+                    if (isProtected(code, x,y,af,al)) continue;
+                    if (isVersionInfo(code, x, y)) continue;
 
-                    uint8_t i = y * code->bitmapStride + (x >> 3),
-                        z = mask(m,x,y) ;
+                    uint16_t i = (y * code->bitmapStride) + (x >> 3),
+                        z = mask(m,x,y);
                     code->bitmap[i] ^= z << (uint8_t)(7-(x & 7));
                 }
             }
@@ -122,8 +123,12 @@ class CQrRenderer {
             delete[] af;
         }
 
+#ifndef QR_TESTING
+    private:
+#endif
+
         
-        uint8_t mask(uint8_t mask, uint8_t x, uint8_t y){
+        inline uint8_t mask(uint8_t mask, uint8_t x, uint8_t y){
             switch(mask) {
                 case 0: return mask0(x,y);
                 case 1: return mask1(x,y);
@@ -136,11 +141,9 @@ class CQrRenderer {
                 default: return 0;
             }
         }
-
-    private:
     
 
-        uint8_t isProtected(QrCode *code, uint8_t x, uint8_t y, uint8_t *af, uint8_t al){
+        uint8_t isProtected(const QrCode *code, uint8_t x, uint8_t y, const uint8_t *af, uint8_t al){
             uint8_t p = 0, s = code->size;
 
             if (x <= 8 && y <= 8) p = 1; // Top left locator
@@ -164,6 +167,15 @@ class CQrRenderer {
                 }
             }
             return p;
+        }
+
+        uint8_t isVersionInfo(const QrCode *code, uint8_t x, uint8_t y){
+            return
+                code->version < 6 ? 0 : 
+                (x < 6 && y >= code->size - 11) // we should check for 3 rows only 
+                ||
+                (y < 6 && x >= code->size - 11) // but those pixels are covered by isProtected() anyway
+                ;
         }
 
         void renderQuietZones(QrCode *code){

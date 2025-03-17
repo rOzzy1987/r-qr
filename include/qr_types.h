@@ -2,8 +2,7 @@
 #define __QR_TYPES_H
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <cstring>
+#include <string.h>
 
 #define QR_MODE_NUM 0
 #define QR_MODE_ALPHA 1 
@@ -114,13 +113,18 @@ struct QrCode {
         version ++;
 
         size = (version << 2) + 17;
-        bitmapStride = (size >> 3) + 1;
+        bitmapStride = (size + 7) >> 3;
         bitmapSize = size * bitmapStride;
         bitmap = new uint8_t[bitmapSize];
         memset(bitmap, 0, bitmapSize);
+
+        this->formatPoly = 0;
+        this->raw = nullptr;
+        this->rawSize = 0;
     }
     ~QrCode(){
-        delete[] this->bitmap;
+        if (this->bitmap != nullptr)
+            delete[] this->bitmap;
         if (this->raw != nullptr)
             delete[] this->raw;
     }

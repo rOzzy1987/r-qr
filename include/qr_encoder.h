@@ -5,19 +5,12 @@
 #include "qr_types.h"
 #include "qr_data.h"
 
-#ifndef QR_MIN_F
-#define QR_MIN_F
-#define min(a,b) ((a) > (b) ? (b) : (a))
-#endif // QR_MIN_F
-
-#ifndef QR_MAX_F
-#define QR_MAX_F
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#endif // QR_MAX_F
-
-#define QR_OPTIMIZE_SEGMENTS
-
-
+#if defined ARDUINO || defined ESP32 
+    #include <arduino.h>
+#else 
+    #define min(a,b) ((a) > (b) ? (b) : (a))
+    #define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 struct QrDataSegment {
     uint16_t from = 0;
@@ -82,17 +75,19 @@ class CQrEncoder{
         uint8_t *buff = new uint8_t[buffSize];
         memset(buff, 0, buffSize);
         uint8_t *currBuff = buff;
-        QrBufferCursor cur = {0,0};
+        QrBufferCursor cur;
 
 
         for(uint8_t i = 0; i < segLength; i++){
-            cur = {0,0};
+            cur.bit = 0;
+            cur.byte = 0;
             writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, currBuff, &cur, version, mode);
             currBuff += cur.byte;
             dataWordsWritten += cur.byte;
         }
         // Add padding to specified length
-        cur = {0,0};
+        cur.bit = 0;
+        cur.byte = 0;
         addPaddingBytes(currBuff, &cur, s.dataWords() - dataWordsWritten);
 
         splitBlob(buff, dataWordsWritten, s);
@@ -134,7 +129,7 @@ class CQrEncoder{
     }
 
     void writeEdc(uint8_t *buff, QrBlockStruct s){
-        uint16_t cur, dataWords = s.shortBlocks.dataWordsPerBlock,
+        uint16_t dataWords = s.shortBlocks.dataWordsPerBlock,
         blockWords = dataWords + s.ecWordsPerBlock;
         for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
             uint16_t edcLen = 0;
@@ -197,7 +192,7 @@ class CQrEncoder{
         return 39;
     }
 
-    QrDataSegment* getSegments(const char* data, uint16_t length, uint8_t& version, QrMode& mode, uint8_t &segLength){
+    QrDataSegment* getSegments(const char* data, uint16_t length, uint8_t version, QrMode& mode, uint8_t &segLength){
         QrDataSegment* seg = nullptr;;
     
         if (mode == QrMode::Unspecified) {
@@ -226,11 +221,11 @@ class CQrEncoder{
      * number of segments.
      * @param data the data to encode
      * @param length the length of the data
-     * @param version the version of the QR code (ma be modified)
+     * @param version the version of the QR code (may be modified)
      * @param resultLength the number of segments returned
      * @return an array of segments
      */
-    QrDataSegment* optimizeSegments(const char* data, uint16_t length, uint8_t& version, uint8_t& resultLength) {
+    QrDataSegment* optimizeSegments(const char* data, uint16_t length, uint8_t version, uint8_t& resultLength) {
         const uint8_t maxSegments = 128;
         QrDataSegment* segments = new QrDataSegment[maxSegments];
 
@@ -292,14 +287,15 @@ class CQrEncoder{
         if (segmentCount == 1) return;
         int16_t minScore = 0x7FFF;
         uint8_t i, minSegmentIndex = 1;
-        uint16_t prevSegmentLength, prevSegmentSize, 
+        uint16_t 
             currSegmentLength = segments->to - segments->from, 
             currSegmentSize = segments[0].getWordCount(version);
 
         // Find the segment with the least negative impact on overall size
         for (i = 1; i < segmentCount; ++i) {
-            prevSegmentLength = currSegmentLength;
-            prevSegmentSize = currSegmentSize;
+            uint16_t 
+                prevSegmentLength = currSegmentLength,
+                prevSegmentSize = currSegmentSize;
             currSegmentLength = segments[i].getWordCount(version);
             currSegmentSize = segments[i].to - segments[i].from;
 
@@ -434,6 +430,8 @@ class CQrEncoder{
                 return this->addDataAlpha(data, length, buff, cursor);
             case QrMode::Byte:
                 return this->addDataByte(data, length, buff, cursor);
+            default: 
+                return;
         }
     }
     void addDataNum(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){

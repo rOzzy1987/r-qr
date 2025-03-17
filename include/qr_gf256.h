@@ -2,9 +2,7 @@
 #define __GF256_H
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #ifdef GF_256_PRECOMPUTED
 static const uint8_t gf256_log[256] = {

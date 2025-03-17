@@ -77,7 +77,7 @@ void print_qr_details(QrCode *code){
 #define CCBOW "\033[30;47m"
 #define CCWOB "\033[37;40m"
 #define CCRST "\033[0m"
-#define BTBMP(b)\
+#define BTBMPCC(b)\
     ((uint8_t)(b) & 0x80 ? CCWOB "  " : CCBOW "  "),\
     ((uint8_t)(b) & 0x40 ? CCWOB "  " : CCBOW "  "),\
     ((uint8_t)(b) & 0x20 ? CCWOB "  " : CCBOW "  "),\
@@ -86,7 +86,22 @@ void print_qr_details(QrCode *code){
     ((uint8_t)(b) & 0x04 ? CCWOB "  " : CCBOW "  "),\
     ((uint8_t)(b) & 0x02 ? CCWOB "  " : CCBOW "  "),\
     ((uint8_t)(b) & 0x01 ? CCWOB "  " : CCBOW "  ")
-#define BMP(b) printf("%s%s%s%s%s%s%s%s", BTBMP(b))
+#define ConsoleColorBitmap(b) printf("%s%s%s%s%s%s%s%s", BTBMPCC(b))
+
+#define APW "##"
+#define APB "  "
+#define APL 2
+#define BTBMP(b)\
+    ((uint8_t)(b) & 0x80 ? APB : APW),\
+    ((uint8_t)(b) & 0x40 ? APB : APW),\
+    ((uint8_t)(b) & 0x20 ? APB : APW),\
+    ((uint8_t)(b) & 0x10 ? APB : APW),\
+    ((uint8_t)(b) & 0x08 ? APB : APW),\
+    ((uint8_t)(b) & 0x04 ? APB : APW),\
+    ((uint8_t)(b) & 0x02 ? APB : APW),\
+    ((uint8_t)(b) & 0x01 ? APB : APW)
+#define ASCIIBitmap(b) printf("%s%s%s%s%s%s%s%s", BTBMP(b))
+
 /**
  * Prints the QR code to the console using ASCII characters to represent the
  * QR code's bitmap. The QR code's bitmap is printed row by row, with each
@@ -98,15 +113,37 @@ void print_qr_details(QrCode *code){
  * to be printed.
  */
 
-void print_qr(QrCode *code) {
+ void print_qr_cc(QrCode *code) {
     printf(CCBOW  "\n\n\n\n");
-    for(uint8_t y = 0; y< code->size; y++) {
+    for(uint16_t y = 0; y< code->size; y++) {
         printf(CCBOW "        ");
-        for (uint8_t x = 0; x< code->bitmapStride; x++)
-            BMP(code->bitmap[y*code->bitmapStride+x]);
+        for (uint16_t x = 0; x < code->bitmapStride; x++)
+            ConsoleColorBitmap(code->bitmap[y * code->bitmapStride + x]);
         printf("        \n");
     }
     printf("\n\n\n\n" CCRST);
+}
+void print_qr(QrCode *code) {
+    for(uint16_t y = 0; y< 4; y++) {
+        printf("\n");
+        for (uint16_t x = 0; x < code->size + (APL << 3); x++){
+            printf(APW);
+        }
+    }
+    for(uint16_t y = 0; y< code->size; y++) {
+        printf("\n" APW APW APW APW);
+        for (uint16_t x = 0; x < code->bitmapStride; x++) {
+            ASCIIBitmap(code->bitmap[y * code->bitmapStride + x]);
+        }
+        printf(APW APW APW APW);
+    }
+    for(uint16_t y = 0; y< 4; y++) {
+        printf("\n");
+        for (uint16_t x = 0; x < code->size + (APL << 3); x++){
+            printf(APW);
+        }
+    }
+    printf("\n");
 }
 #endif //ARDUINO
 

@@ -2,9 +2,6 @@
 #define __QR_H
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <cstring>
 #include "qr_types.h"
 #include "qr_data.h"
 #include "qr_gf256.h"
