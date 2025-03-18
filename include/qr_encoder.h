@@ -173,6 +173,8 @@ class CQrEncoder{
         }
 
         // correct shifting for different block sizes 
+        if(str.longBlocks == 0) return;
+        
         uint16_t p = totalBlocks * str.dataWordsPerShortBlock;
         movingBuff = buff + p;
         for (uint8_t i0 = 0; i0 < str.ecWordsPerBlock; i0++ ){

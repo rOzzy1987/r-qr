@@ -1,10 +1,10 @@
 #include "../common.h"
 
 static uint8_t protection_testCases [][4] = {
-    {6, 0, 8, 0}, // nothing there
+    {6, 0, 8, 1}, // version info
     {6, 1, 7, 1}, // quiet zone
     {6, 22, 6, 1}, // timing pattern
-    {6, 8, 4, 0}, // nothing there
+    {6, 18, 4, 0}, // nothing there
 };
 
 static void protection_runTestCase(uint8_t n){
@@ -16,6 +16,8 @@ static void protection_runTestCase(uint8_t n){
 }
 
 void renderer_protection(){
-    for(uint8_t i = 0; i < 4; i++)
+    for(uint8_t i = 0; i < 4; i++) {
+        // printf("\n%d", i);
         protection_runTestCase(i);
+    }
 }

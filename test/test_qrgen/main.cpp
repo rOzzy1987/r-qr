@@ -19,9 +19,8 @@ int main( int argc, char **argv) {
     RUN_TEST(qrgen_changeMask_v7Text);
     RUN_TEST(qrgen_changeMask_largeText);
 
-    RUN_TEST(qrgen_setPolys);
-
-    
+    RUN_TEST(qrgen_setFormatPoly);
+    RUN_TEST(qrgen_setVersionPoly);
 
     UNITY_END();
 }

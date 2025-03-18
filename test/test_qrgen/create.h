@@ -15,9 +15,8 @@ struct CreateTestCase {
 
 CreateTestCase create_testCases[] = {
     {"https://www.qrcode.com/", 1, QrMode::Byte, QrEcc::M, 0b101111001111100, 2},
-    {"https://www.qrcode.com/", 6, QrMode::Byte, QrEcc::M, 0b101111001111100, 2},
-    {"https://www.qrcode.com/", 7, QrMode::Unspecified, QrEcc::H, 0b101111001111100, 2},
-    
+    {"https://www.qrcode.com/", 6, QrMode::Byte, QrEcc::M, 0b101010000010010, 0},
+    {"https://www.qrcode.com/", 7, QrMode::Unspecified, QrEcc::H, 0b000011101100010, 4},
 };
 
 static void create_runTestCase(uint8_t n){
