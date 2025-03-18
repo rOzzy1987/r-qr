@@ -18,28 +18,34 @@
 
     void print_bin(uint8_t v){
         printf("\n" BTBF, BTB(v));
+        fflush(stdout);
     }
     
     void print_bin(uint16_t v){
         printf("\n" BTBF, BTB(v >> 8));
         printf(" " BTBF, BTB(v & 0xFF));
+        fflush(stdout);
     }
     void print_bin(uint32_t v){
         printf("\n" BTBF, BTB(v >> 24));
         printf(" " BTBF, BTB((v >> 16) & 0xFF));
         printf(" " BTBF, BTB((v >> 8) & 0xFF));
         printf(" " BTBF, BTB(v & 0xFF));
+        fflush(stdout);
     }
 
     void print_hex(uint8_t v){
         printf("\n%#06x", v);
+        fflush(stdout);
     }
     
     void print_hex(uint16_t v){
         printf("\n%#06x", v);
+        fflush(stdout);
     }
     void print_hex(uint32_t v){
         printf("\n%#06x %04x", v>>16, v&0xFFFF);
+        fflush(stdout);
     }
 
 void print_arr_f(const char* f, const uint16_t *arr, uint16_t len){
@@ -50,6 +56,7 @@ void print_arr_f(const char* f, const uint16_t *arr, uint16_t len){
     }
 
     printf("]");
+    fflush(stdout);
 }
 void print_arr_f(const char* f, const uint8_t *arr, uint16_t len){
     printf("\n(%d) [ ", len);
@@ -59,6 +66,7 @@ void print_arr_f(const char* f, const uint8_t *arr, uint16_t len){
     }
 
     printf("]");
+    fflush(stdout);
 }
 
 void print_arr(const uint16_t *arr, uint16_t len){
@@ -139,6 +147,7 @@ void print_qr_details(QrCode *code){
         printf("        \n");
     }
     printf("\n\n\n\n" CCRST);
+    fflush(stdout);
 }
 void print_qr(QrCode *code) {
     for(uint16_t y = 0; y< 4; y++) {
@@ -161,6 +170,7 @@ void print_qr(QrCode *code) {
         }
     }
     printf("\n");
+    fflush(stdout);
 }
 #endif //ARDUINO
 

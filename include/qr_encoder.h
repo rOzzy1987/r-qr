@@ -84,9 +84,7 @@ class CQrEncoder{
 
         splitBlob(buff, s);
         writeEdc(buff, s);
-        print_arr_f("%02X ",buff, buffSize);
         mixBlocks(buff, s);
-        print_arr_f("%02X ",buff, buffSize);
 
         resultLen = buffSize;
         return buff;
@@ -124,79 +122,70 @@ class CQrEncoder{
 
     void mixBlocks(uint8_t *buff, QrBlockStruct2 str){
         uint16_t 
-            sbc = str.shortBlocks,
-            lbc = str.longBlocks,
-            tbc = sbc+lbc,
-            sbl = str.dataWordsPerShortBlock + str.ecWordsPerBlock,
-            lbl = str.dataWordsPerShortBlock + 1 + str.ecWordsPerBlock,
-            obl = sbl,
-            size = str.totalWords();
+            totalBlocks = str.shortBlocks + str.longBlocks,
+            blockLength = str.dataWordsPerShortBlock + str.ecWordsPerBlock,
+            n = blockLength;
 
 
-        if (tbc < 2) return;
+        if (totalBlocks < 2) return;
             
-        uint8_t temp[tbc];
+        uint8_t temp[totalBlocks],
+            *movingBuff = buff;
+        uint16_t moved[totalBlocks];
+        memset(moved, 0, totalBlocks);
         #ifdef QR_TESTING
-        memset(temp, 0, tbc);
+        memset(temp, 0, totalBlocks);
         #endif
         
-        for (uint16_t i0 = 0; i0 < obl - 1; i0++) {
+        for (uint16_t i0 = 1; i0 < n; i0++) {
             // get a batch of values
-            uint16_t p = 0;
-            for(uint16_t i1 = 0; i1 < sbc; i1++) {
-                temp[i1] = buff[p]; 
+            uint16_t p = blockLength; // start with the second block, the first byte is already in place
+            for (uint16_t i1 = 1; i1 < totalBlocks; i1++)
+            {
+                temp[i1] = movingBuff[p];
                 #ifdef QR_TESTING
-                buff[p] = 0;
+                movingBuff[p] = 0;
                 #endif
-                p+= sbl;
-            }
-            for(uint16_t i1 = 0; i1 < lbc; i1++) {
-                temp[i1+sbc] = buff[p]; 
-                #ifdef QR_TESTING
-                buff[p] = 0;
-                #endif
-                p+= lbl;
+                moved[i1] = p;
+
+                p += i1 < (str.shortBlocks) ? blockLength : blockLength + 1;      
             }
 
             // shift to eliminate 'empty' spaces
-            sbl = sbl > 0 ? sbl - 1 : 0;
-            lbl = lbl > 0 ? lbl - 1 : 0;
-            p = size - 1;
-            uint8_t sh = 0;
-
-            print_arr_f("%02X ",temp, tbc);
-            print_arr_f("%02X ",buff, size);
-            for (uint8_t i1 = 0; i1 < lbc; i1++){
-                for (uint8_t i2 = 0; i2 < lbl; i2++){
-                    if (sh){
-                        buff[p] = buff[p-sh];
-                        #ifdef QR_TESTING
-                        buff[p-sh] = 0;
-                        #endif
-                    }
+            uint8_t shift = 0;
+            p = totalBlocks - 1;
+            for (uint16_t i1 = moved[p]; i1 >= totalBlocks; i1--)
+            {
+                if (p > 0 && i1 - shift == moved[p]) {
+                    shift++;
                     p--;
                 }
-                sh++;
+                movingBuff[i1] = movingBuff[i1 - shift];
+                #ifdef QR_TESTING
+                movingBuff[i1-shift] = 0;
+                #endif
             }
-            for (uint8_t i1 = 0; i1 < sbc; i1++){
-                for (uint8_t i2 = 0; i2 < sbl; i2++){
-                    if (sh) {
-                        buff[p] = buff[p-sh];
-                        #ifdef QR_TESTING
-                        buff[p-sh] = 0;
-                        #endif
-                    }
-                    p--;
-                }
-                sh++;
-            }
-
-            print_arr_f("%02X ",buff, size);
             // write back temp to buff
-            memcpy(buff, temp, tbc);
+            memcpy(movingBuff + 1, temp + 1, totalBlocks -1);
 
-            buff += tbc;
-            size -= tbc;
+            blockLength--;
+            movingBuff += totalBlocks;
+        }
+
+        // correct shifting for different block sizes 
+        uint16_t p = totalBlocks * str.dataWordsPerShortBlock;
+        movingBuff = buff + p;
+        for (uint8_t i0 = 0; i0 < str.ecWordsPerBlock; i0++ ){
+            for (uint8_t i1 = 0; i1 < str.longBlocks; i1++) {
+                temp[i1] = movingBuff[str.shortBlocks + i1];
+            }
+            for (uint8_t i1 = totalBlocks - 1; i1 >= str.longBlocks; i1--) {
+                movingBuff[i1] = movingBuff[i1 - str.longBlocks];
+            }
+            for (uint8_t i1 = 0; i1 < str.longBlocks; i1++) {
+                movingBuff[i1] = temp[i1];
+            }
+            movingBuff += totalBlocks;
         }
     }
 
