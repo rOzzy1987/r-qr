@@ -209,7 +209,7 @@ void qrData_structs() {
     {
         for (uint8_t j = 0; j < 4; j++)
         {
-            QrBlockStruct2 s = qr_block_struct(i, (QrEcc)j);
+            QrBlockStruct s = qr_block_struct(i, (QrEcc)j);
 
             ASSERT_EQ_UI8(struct_cases[i][j][0], s.ecWordsPerBlock);
             ASSERT_EQ_UI8(struct_cases[i][j][1], s.shortBlocks);

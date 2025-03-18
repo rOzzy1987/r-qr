@@ -1,0 +1,13 @@
+{
+  "name": "wasm-integration",
+  "version": "1.0.0",
+  "description": "WASM integration of a QR generator written in c++",
+  "main": "index.html",
+  "scripts": {
+    "dev": "lite-server"
+  },
+  "author": "rOzzy1987",
+  "devDependencies": {
+    "lite-server": "^2.6.1"
+  }
+}

@@ -69,7 +69,7 @@ class CQrEncoder{
             version = optimizeVersion(seg, segLength, version, ecLevel);
         }
 
-        QrBlockStruct2 s = qr_block_struct(version,ecLevel);
+        QrBlockStruct s = qr_block_struct(version,ecLevel);
         uint16_t buffSize = s.totalWords();
         uint8_t *buff = new uint8_t[buffSize];
         memset(buff, 0, buffSize);
@@ -93,7 +93,7 @@ class CQrEncoder{
 #ifndef QR_TESTING
     private:
 #endif
-    void splitBlob(uint8_t *buff, QrBlockStruct2 s) {
+    void splitBlob(uint8_t *buff, QrBlockStruct s) {
         uint16_t 
             iSrc = s.dataWords(),
             iDst = s.totalWords();
@@ -120,7 +120,7 @@ class CQrEncoder{
         }
     }
 
-    void mixBlocks(uint8_t *buff, QrBlockStruct2 str){
+    void mixBlocks(uint8_t *buff, QrBlockStruct str){
         uint16_t 
             totalBlocks = str.shortBlocks + str.longBlocks,
             blockLength = str.dataWordsPerShortBlock + str.ecWordsPerBlock,
@@ -174,7 +174,7 @@ class CQrEncoder{
 
         // correct shifting for different block sizes 
         if(str.longBlocks == 0) return;
-        
+
         uint16_t p = totalBlocks * str.dataWordsPerShortBlock;
         movingBuff = buff + p;
         for (uint8_t i0 = 0; i0 < str.ecWordsPerBlock; i0++ ){
@@ -198,7 +198,7 @@ class CQrEncoder{
         addStopBitsAndPad(buff, cur);
     }
 
-    void writeEdc(uint8_t *buff, QrBlockStruct2 s){
+    void writeEdc(uint8_t *buff, QrBlockStruct s){
         uint16_t dataWords = s.dataWordsPerShortBlock,
         blockWords = dataWords + s.ecWordsPerBlock;
         for(uint8_t i = 0; i < s.shortBlocks; i++){
@@ -222,11 +222,11 @@ class CQrEncoder{
     }
 
     uint8_t optimizeVersion(QrDataSegment *segments, uint8_t segLength, uint8_t version, QrEcc ecLevel) {
-        QrBlockStruct s = qr_blocks[version][ecLevel];
+        QrBlockStruct s = qr_block_struct(version,ecLevel);
         uint16_t actualWords = getTotalWords(segments, segLength, version);
         if (actualWords < s.dataWords()){
             while(true&& version > 0) {
-                s = qr_blocks[version - 1][ecLevel];
+                s = qr_block_struct(version-1,ecLevel);
                 actualWords = getTotalWords(segments, segLength, version - 1);
                 if (actualWords > s.dataWords()) {
                     return version;
@@ -238,7 +238,7 @@ class CQrEncoder{
 
         while( version < 39) {
             version++;
-            s = qr_blocks[version][ecLevel];
+            s = qr_block_struct(version,ecLevel);
             if (getTotalWords(segments, segLength, version) <= s.dataWords())
                 return version;
         }

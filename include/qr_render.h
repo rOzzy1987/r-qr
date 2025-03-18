@@ -1,7 +1,6 @@
 #ifndef __QR_RENDER
 #define __QR_RENDER
 
-#include <stdio.h>
 #include "qr_types.h"
 #include "qr_data.h"
 

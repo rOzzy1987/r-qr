@@ -1,0 +1,102 @@
+<html>
+    <head>
+        <script src="qr.js"></script>
+        <script>
+            genClicked = function() {
+                var text = document.getElementById("input").value;
+                var ec = document.getElementById("ec").value;
+
+                const data = Module.createQr(text, Number(ec));
+                console.log(data);
+
+                display(data);
+            }
+
+            display=function(data){
+                console.log("drawing started")
+                var a = [];
+                for (var i = 0; i < data.bitmap.size(); i++) 
+                    a.push(data.bitmap.get(i));
+                const z = 15;
+
+                var qr = document.getElementById("qr");
+                qr.innerHTML = "";
+                qr.setAttribute('viewBox', `0 0 ${z*data.size} ${z*data.size}`);
+
+                var x = 0,y = 0, p = 0;
+                for (var b of a){
+                    for (var i = 0; i < 8; i++) {
+                        if (b & (1 << (7 - i))){
+                            var e = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                            e.setAttribute("width", z);
+                            e.setAttribute("height", z);
+                            e.setAttribute("x", z*x);
+                            e.setAttribute("y", z*y);
+                            e.setAttribute("fill", "#000");
+                            qr.appendChild(e);
+                        }
+                        x++;
+                        if (x == data.size) {
+                            y++;
+                            x = 0;
+                            break;
+                        }
+                    }
+                }
+
+                console.log("drawing done")
+            }
+
+        </script>
+    </head>
+    <style>
+        body {
+            display:flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            font-family: sans-serif;
+        }
+        body > * {
+            padding: 80px;
+            background: #DEF;
+            border-radius: 16px;
+            width: 800px;
+        }
+        textarea, select, button {
+            min-width: 250px;
+            margin: 8px 0;
+            padding: 3px 32px;
+        }
+        #qr {
+            height: 800px;
+            width: 800px;
+        }
+    </style>
+    <body>
+        <div>
+            <textarea id="input" rows="6" cols="80">Sample QR code created with WASM!</textarea>
+            <br>
+            <select id="ec">
+                <option value="0">Error correction level L</option>
+                <option value="1">Error correction level M</option>
+                <option value="2">Error correction level Q</option>
+                <option value="3">Error correction level H</option>
+            </select>
+            <br>
+            <button onclick="genClicked(); return false;" id="generate">Generate</button>
+            <p>
+                This is an example of using the library in a web setting. 
+            </p>
+            <p>
+                Just type some text, set the error correction level and hit Generate!
+            </p>
+        </div>
+        <div>
+            <svg xmlns="http://www.w3.org/2000/svg" id="qr" style="background-color: #FFF;">
+
+            </svg>
+        </div>
+    </body>
+</html>

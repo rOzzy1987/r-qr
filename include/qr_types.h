@@ -27,27 +27,9 @@ struct QrGroupStruct {
 };
 
 /**
- * Defines the data structure for a block
- * 
- * 
-    v3-L {15, {1, 55}, {0, 0}},
+ * Defines the data structure for a QR code
  */
 struct QrBlockStruct {
-    uint8_t ecWordsPerBlock;
-    QrGroupStruct shortBlocks;
-    QrGroupStruct longBlocks;
-
-    uint16_t dataWords() {
-        return shortBlocks.blockCount * shortBlocks.dataWordsPerBlock + longBlocks.blockCount * longBlocks.dataWordsPerBlock;
-    }
-    uint16_t totalWords() {
-        return dataWords() + ecWords();
-    }
-    uint16_t ecWords() {
-        return (shortBlocks.blockCount + longBlocks.blockCount) * ecWordsPerBlock;
-    }
-};
-struct QrBlockStruct2 {
     uint8_t ecWordsPerBlock;
     uint8_t dataWordsPerShortBlock;
     uint8_t shortBlocks;
@@ -79,7 +61,7 @@ enum QrEcc {
     H = QR_ERR_H
 };
 
-struct QrCode {
+extern "C" struct QrCode {
     /**
      * QR code version (0 based!) 
      */
@@ -128,6 +110,10 @@ struct QrCode {
      * Only comes into play once version (0 based) is larger than 5
      */
     uint32_t versionPoly;
+
+    QrCode() {
+        QrCode(0, QrEcc::L);
+    }
     
     QrCode(uint8_t version, uint8_t ecLevel){
         this->version = version;
@@ -145,6 +131,22 @@ struct QrCode {
         this->raw = nullptr;
         this->rawSize = 0;
     }
+
+    QrCode(const QrCode &c) {
+        this->bitmapSize = c.bitmapSize;
+        this->bitmapStride = c.bitmapStride;
+        this->ecLevel = c.ecLevel;
+        this->formatPoly = c.formatPoly;
+        this->mask = c.mask;
+        this->rawSize = c.rawSize;
+        this->size = c.size;
+        this->version = c.version;
+        this->versionPoly = c.versionPoly;
+
+        this->bitmap = new uint8_t[c.bitmapSize];
+        this->raw = this->rawSize == 0 ? nullptr : new uint8_t[this->rawSize];
+    }
+
     ~QrCode(){
         if (this->bitmap != nullptr)
             delete[] this->bitmap;

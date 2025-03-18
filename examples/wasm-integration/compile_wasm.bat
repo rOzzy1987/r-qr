@@ -1,0 +1,1 @@
+em++ --bind -I ../../Include -I ../../src main.cpp -o qr.js  -s STANDALONE_WASM --no-entry -s EXPORTED_FUNCTIONS=_createQr -s EXPORTED_RUNTIME_METHODS=ccall,cwrap -s NO_FILESYSTEM=1 

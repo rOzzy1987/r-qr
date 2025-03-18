@@ -94,9 +94,6 @@ void print_qr_details(QrCode *code){
 
 
 
-
-#endif //QR_DEBUG
-
 #ifndef ARDUINO
 
 #define CCBOW "\033[30;47m"
@@ -173,5 +170,8 @@ void print_qr(QrCode *code) {
     fflush(stdout);
 }
 #endif //ARDUINO
+
+
+#endif //QR_DEBUG
 
 #endif //__QR_DEBUG
