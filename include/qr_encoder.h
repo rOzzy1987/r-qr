@@ -69,30 +69,24 @@ class CQrEncoder{
             version = optimizeVersion(seg, segLength, version, ecLevel);
         }
 
-        QrBlockStruct s = qr_blocks[version][ecLevel];
-        uint16_t buffSize = s.totalWords(),
-            dataWordsWritten = 0;
+        QrBlockStruct2 s = qr_block_struct(version,ecLevel);
+        uint16_t buffSize = s.totalWords();
         uint8_t *buff = new uint8_t[buffSize];
         memset(buff, 0, buffSize);
-        uint8_t *currBuff = buff;
         QrBufferCursor cur;
 
 
         for(uint8_t i = 0; i < segLength; i++){
-            cur.bit = 0;
-            cur.byte = 0;
-            writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, currBuff, &cur, version, mode);
-            currBuff += cur.byte;
-            dataWordsWritten += cur.byte;
+            writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, buff, &cur, version, mode);
         }
         // Add padding to specified length
-        cur.bit = 0;
-        cur.byte = 0;
-        addPaddingBytes(currBuff, &cur, s.dataWords() - dataWordsWritten);
+        addPaddingBytes(buff, &cur, s.dataWords());
 
-        splitBlob(buff, dataWordsWritten, s);
+        splitBlob(buff, s);
         writeEdc(buff, s);
-        mixBlocks(buff, buffSize, s);
+        print_arr_f("%02X ",buff, buffSize);
+        mixBlocks(buff, s);
+        print_arr_f("%02X ",buff, buffSize);
 
         resultLen = buffSize;
         return buff;
@@ -101,86 +95,108 @@ class CQrEncoder{
 #ifndef QR_TESTING
     private:
 #endif
-    void splitBlob(uint8_t *buff, uint16_t buffSize, QrBlockStruct s) {
+    void splitBlob(uint8_t *buff, QrBlockStruct2 s) {
         uint16_t 
             iSrc = s.dataWords(),
             iDst = s.totalWords();
-        for(uint8_t i = 0; i < s.longBlocks.blockCount; i++){
-            iSrc -= s.longBlocks.dataWordsPerBlock;
-            iDst -= s.ecWordsPerBlock + s.longBlocks.dataWordsPerBlock;
-            for(int16_t j = s.longBlocks.dataWordsPerBlock; j >= 0; j--){
+        for(uint8_t i = 0; i < s.longBlocks; i++){
+            iSrc -= s.dataWordsPerShortBlock + 1;
+            iDst -= s.ecWordsPerBlock + s.dataWordsPerShortBlock + 1;
+            for(int16_t j = s.dataWordsPerShortBlock + 1; j >= 0; j--){
                 buff[iDst + j] = buff[iSrc + j];
+                #ifdef QR_TESTING
+                buff[iSrc + j] = 0;
+                #endif
             }
         }
         // the first data block is already in place
-        for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
-            iSrc -= s.shortBlocks.dataWordsPerBlock;
-            iDst -= s.ecWordsPerBlock + s.shortBlocks.dataWordsPerBlock;
-            for(int16_t j = s.shortBlocks.dataWordsPerBlock; j >= 0; j--){
+        for(uint8_t i = 0; i < s.shortBlocks - 1; i++){
+            iSrc -= s.dataWordsPerShortBlock;
+            iDst -= s.ecWordsPerBlock + s.dataWordsPerShortBlock;
+            for(int16_t j = s.dataWordsPerShortBlock; j >= 0; j--){
                 buff[iDst + j] = buff[iSrc + j];
+                #ifdef QR_TESTING
+                buff[iSrc + j] = 0;
+                #endif
             }
         }
     }
 
-    void mixBlocks(uint8_t *buff, uint16_t buffSize, QrBlockStruct str){
+    void mixBlocks(uint8_t *buff, QrBlockStruct2 str){
         uint16_t 
-            sbc = str.shortBlocks.blockCount,
-            lbc = str.longBlocks.blockCount,
+            sbc = str.shortBlocks,
+            lbc = str.longBlocks,
             tbc = sbc+lbc,
-            sbl = str.shortBlocks.dataWordsPerBlock + str.ecWordsPerBlock,
-            lbl = str.longBlocks.dataWordsPerBlock + str.ecWordsPerBlock,
-            obl;
+            sbl = str.dataWordsPerShortBlock + str.ecWordsPerBlock,
+            lbl = str.dataWordsPerShortBlock + 1 + str.ecWordsPerBlock,
+            obl = sbl,
+            size = str.totalWords();
+
 
         if (tbc < 2) return;
-
-        if (sbc > 0 && lbc == 0){
-            lbc = sbc;
-            sbc = 0;
-            lbl = sbl;
-            sbl = 0;
-        }
-        obl = lbl;
             
         uint8_t temp[tbc];
+        #ifdef QR_TESTING
+        memset(temp, 0, tbc);
+        #endif
         
         for (uint16_t i0 = 0; i0 < obl - 1; i0++) {
             // get a batch of values
-            for(uint16_t i1 = 0; i1 < tbc; i1++) {
-                uint16_t i2 = i1 * lbl;
-                if (i1 >= lbc)
-                    i2 -= i1 - lbc;
-                temp[i1] = buff[i2]; 
-                buff[i2] = 0;
+            uint16_t p = 0;
+            for(uint16_t i1 = 0; i1 < sbc; i1++) {
+                temp[i1] = buff[p]; 
+                #ifdef QR_TESTING
+                buff[p] = 0;
+                #endif
+                p+= sbl;
+            }
+            for(uint16_t i1 = 0; i1 < lbc; i1++) {
+                temp[i1+sbc] = buff[p]; 
+                #ifdef QR_TESTING
+                buff[p] = 0;
+                #endif
+                p+= lbl;
             }
 
             // shift to eliminate 'empty' spaces
             sbl = sbl > 0 ? sbl - 1 : 0;
             lbl = lbl > 0 ? lbl - 1 : 0;
-            int16_t p = buffSize - 1;
+            p = size - 1;
             uint8_t sh = 0;
 
-            for (uint8_t i1 = 0; i1 < sbc; i1++){
-                for (uint8_t i2 = 0; i2 < sbl; i2++){
-                    if (sh)
+            print_arr_f("%02X ",temp, tbc);
+            print_arr_f("%02X ",buff, size);
+            for (uint8_t i1 = 0; i1 < lbc; i1++){
+                for (uint8_t i2 = 0; i2 < lbl; i2++){
+                    if (sh){
                         buff[p] = buff[p-sh];
+                        #ifdef QR_TESTING
+                        buff[p-sh] = 0;
+                        #endif
+                    }
                     p--;
                 }
                 sh++;
             }
-            for (uint8_t i1 = 0; i1 < lbc; i1++){
-                for (uint8_t i2 = 0; i2 < lbl; i2++){
-                    if (sh)
+            for (uint8_t i1 = 0; i1 < sbc; i1++){
+                for (uint8_t i2 = 0; i2 < sbl; i2++){
+                    if (sh) {
                         buff[p] = buff[p-sh];
+                        #ifdef QR_TESTING
+                        buff[p-sh] = 0;
+                        #endif
+                    }
                     p--;
                 }
                 sh++;
             }
 
+            print_arr_f("%02X ",buff, size);
             // write back temp to buff
             memcpy(buff, temp, tbc);
 
             buff += tbc;
-            buffSize -= tbc;
+            size -= tbc;
         }
     }
 
@@ -191,10 +207,10 @@ class CQrEncoder{
         addStopBitsAndPad(buff, cur);
     }
 
-    void writeEdc(uint8_t *buff, QrBlockStruct s){
-        uint16_t dataWords = s.shortBlocks.dataWordsPerBlock,
+    void writeEdc(uint8_t *buff, QrBlockStruct2 s){
+        uint16_t dataWords = s.dataWordsPerShortBlock,
         blockWords = dataWords + s.ecWordsPerBlock;
-        for(uint8_t i = 0; i < s.shortBlocks.blockCount; i++){
+        for(uint8_t i = 0; i < s.shortBlocks; i++){
             uint16_t edcLen = 0;
 
             uint8_t *edc = Gf256.getEdc(buff, dataWords, blockWords, edcLen);
@@ -202,9 +218,9 @@ class CQrEncoder{
             delete[] edc;
             buff += blockWords;
         }
-        dataWords = s.longBlocks.dataWordsPerBlock;
+        dataWords = s.dataWordsPerShortBlock + 1;
         blockWords = dataWords + s.ecWordsPerBlock;
-        for(uint8_t i = 0; i < s.longBlocks.blockCount; i++){
+        for(uint8_t i = 0; i < s.longBlocks; i++){
             uint16_t edcLen = 0;
 
             uint8_t *edc = Gf256.getEdc(buff, dataWords, blockWords, edcLen);

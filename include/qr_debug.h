@@ -16,20 +16,31 @@
 
 
 
-void print_bin(uint8_t v){
-    printf("\n" BTBF, BTB(v));
-}
+    void print_bin(uint8_t v){
+        printf("\n" BTBF, BTB(v));
+    }
+    
+    void print_bin(uint16_t v){
+        printf("\n" BTBF, BTB(v >> 8));
+        printf(" " BTBF, BTB(v & 0xFF));
+    }
+    void print_bin(uint32_t v){
+        printf("\n" BTBF, BTB(v >> 24));
+        printf(" " BTBF, BTB((v >> 16) & 0xFF));
+        printf(" " BTBF, BTB((v >> 8) & 0xFF));
+        printf(" " BTBF, BTB(v & 0xFF));
+    }
 
-void print_bin(uint16_t v){
-    printf("\n" BTBF, BTB(v >> 8));
-    printf(" " BTBF, BTB(v & 0xFF));
-}
-void print_bin(uint32_t v){
-    printf("\n" BTBF, BTB(v >> 24));
-    printf(" " BTBF, BTB((v >> 16) & 0xFF));
-    printf(" " BTBF, BTB((v >> 8) & 0xFF));
-    printf(" " BTBF, BTB(v & 0xFF));
-}
+    void print_hex(uint8_t v){
+        printf("\n%#06x", v);
+    }
+    
+    void print_hex(uint16_t v){
+        printf("\n%#06x", v);
+    }
+    void print_hex(uint32_t v){
+        printf("\n%#06x %04x", v>>16, v&0xFFFF);
+    }
 
 void print_arr_f(const char* f, const uint16_t *arr, uint16_t len){
     printf("\n(%d) [ ", len);

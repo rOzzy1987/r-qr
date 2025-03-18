@@ -29,6 +29,7 @@ int main( int argc, char **argv) {
 
     RUN_TEST(encoder_mix_simpleMultiBlock);
     RUN_TEST(encoder_mix_simpleMultiGroup);
+    RUN_TEST(encoder_mix_unevenMultiGroup);
     RUN_TEST(encoder_mix_singleBlock);
 
     UNITY_END();

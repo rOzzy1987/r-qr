@@ -47,6 +47,22 @@ struct QrBlockStruct {
         return (shortBlocks.blockCount + longBlocks.blockCount) * ecWordsPerBlock;
     }
 };
+struct QrBlockStruct2 {
+    uint8_t ecWordsPerBlock;
+    uint8_t dataWordsPerShortBlock;
+    uint8_t shortBlocks;
+    uint8_t longBlocks;
+
+    uint16_t dataWords() {
+        return (shortBlocks * dataWordsPerShortBlock) + (longBlocks * (dataWordsPerShortBlock+1));
+    }
+    uint16_t totalWords() {
+        return dataWords() + ecWords();
+    }
+    uint16_t ecWords() {
+        return (shortBlocks + longBlocks) * ecWordsPerBlock;
+    }
+};
 
 enum QrMode {
     Numeric = QR_MODE_NUM,

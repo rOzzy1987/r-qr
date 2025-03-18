@@ -16,13 +16,11 @@ void changeMask_runTestCase(uint8_t n) {
         QrGenerator.changeMask(code, i);
         if (code->version > 8) 
             continue;
-        // if (code->version < 6) 
-        //     return;
-        printf("\nMask #%d", i);
-        printf("\nVersion #%d", code->version+1);
-        print_qr(code);
-        printf("\n");
-        print_arr(code->bitmap, code->bitmapSize);
+        // printf("\nMask #%d", i);
+        // printf("\nVersion #%d", code->version+1);
+        // print_qr(code);
+        // printf("\n");
+        // print_arr(code->bitmap, code->bitmapSize);
     }
 }
 

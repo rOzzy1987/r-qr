@@ -150,8 +150,76 @@ const uint16_t qr_capacities[][40][4] = {
     }
 };
 
+uint16_t qr_available_modules(uint8_t version) {
+    version++;
+    if (version == 1) {
+      return 208;
+    }
+    uint8_t alignmentCount = (version / 7) + 2;
+    uint8_t size = (version << 2) + 17;
+    return (size * size)
+      - 192 // 3 finder patterns
+      - (alignmentCount*alignmentCount - 3) * 25 // alignment patterns
+      - (((version << 2) + 1) << 1) // timing patterns
+      + (alignmentCount - 2) * 10 // timing patterns already covered by alignment patterns
+      - 31 // version strip + black module
+      - (version > 6 ? 36 : 0); // version polynomial
+  }
 
+static const uint16_t qr_block_struct_data[40][4][2] = {
+  { { 7,  1}, {10,  1}, {13,  1}, {17,  1} },
+  { {10,  1}, {16,  1}, {22,  1}, {28,  1} },
+  { {15,  1}, {26,  1}, {18,  2}, {22,  2} },
+  { {20,  1}, {18,  2}, {26,  2}, {16,  4} },
+  { {26,  1}, {24,  2}, {18,  4}, {22,  4} },
+  { {18,  2}, {16,  4}, {24,  4}, {28,  4} },
+  { {20,  2}, {18,  4}, {18,  6}, {26,  5} },
+  { {24,  2}, {22,  4}, {22,  6}, {26,  6} },
+  { {30,  2}, {22,  5}, {20,  8}, {24,  8} },
+  { {18,  4}, {26,  5}, {24,  8}, {28,  8} },
+  { {20,  4}, {30,  5}, {28,  8}, {24, 11} },
+  { {24,  4}, {22,  8}, {26, 10}, {28, 11} },
+  { {26,  4}, {22,  9}, {24, 12}, {22, 16} },
+  { {30,  4}, {24,  9}, {20, 16}, {24, 16} },
+  { {22,  6}, {24, 10}, {30, 12}, {24, 18} },
+  { {24,  6}, {28, 10}, {24, 17}, {30, 16} },
+  { {28,  6}, {28, 11}, {28, 16}, {28, 19} },
+  { {30,  6}, {26, 13}, {28, 18}, {28, 21} },
+  { {28,  7}, {26, 14}, {26, 21}, {26, 25} },
+  { {28,  8}, {26, 16}, {30, 20}, {28, 25} },
+  { {28,  8}, {26, 17}, {28, 23}, {30, 25} },
+  { {28,  9}, {28, 17}, {30, 23}, {24, 34} },
+  { {30,  9}, {28, 18}, {30, 25}, {30, 30} },
+  { {30, 10}, {28, 20}, {30, 27}, {30, 32} },
+  { {26, 12}, {28, 21}, {30, 29}, {30, 35} },
+  { {28, 12}, {28, 23}, {28, 34}, {30, 37} },
+  { {30, 12}, {28, 25}, {30, 34}, {30, 40} },
+  { {30, 13}, {28, 26}, {30, 35}, {30, 42} },
+  { {30, 14}, {28, 28}, {30, 38}, {30, 45} },
+  { {30, 15}, {28, 29}, {30, 40}, {30, 48} },
+  { {30, 16}, {28, 31}, {30, 43}, {30, 51} },
+  { {30, 17}, {28, 33}, {30, 45}, {30, 54} },
+  { {30, 18}, {28, 35}, {30, 48}, {30, 57} },
+  { {30, 19}, {28, 37}, {30, 51}, {30, 60} },
+  { {30, 19}, {28, 38}, {30, 53}, {30, 63} },
+  { {30, 20}, {28, 40}, {30, 56}, {30, 66} },
+  { {30, 21}, {28, 43}, {30, 59}, {30, 70} },
+  { {30, 22}, {28, 45}, {30, 62}, {30, 74} },
+  { {30, 24}, {28, 47}, {30, 65}, {30, 77} },
+  { {30, 25}, {28, 49}, {30, 68}, {30, 81} }
+};
 
+QrBlockStruct2 qr_block_struct(uint8_t version, QrEcc ecLevel){
+    uint16_t totalWords = qr_available_modules(version) >> 3;
+    QrBlockStruct2 s = {0,0,0,0};
+    s.ecWordsPerBlock = qr_block_struct_data[version][ecLevel][0];
+    uint16_t totalBlocks = qr_block_struct_data[version][ecLevel][1],
+        shortBlockLength = totalWords / totalBlocks;
+    s.longBlocks = totalWords - (shortBlockLength * totalBlocks);
+    s.dataWordsPerShortBlock = shortBlockLength - s.ecWordsPerBlock;
+    s.shortBlocks = totalBlocks - s.longBlocks;
+    return s;
+}
 /**
  * The block structure for different versions
  * 
