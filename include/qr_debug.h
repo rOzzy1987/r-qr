@@ -90,8 +90,8 @@ void print_arr_hex(const uint8_t *arr, uint16_t len){
     print_arr_f("%#02x, ", arr, len);
 }
 
-void print_cursor(QrBufferCursor *c) {
-    printf("\n{%d:%d}", c->byte, c->bit);
+void print_cursor(QrBufferCursor c) {
+    printf("\n{%d:%d}", c.byte, c.bit);
 }
 
 void print_qr_details(QrCode *code){

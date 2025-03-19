@@ -26,7 +26,7 @@ struct QrDataSegment {
         return QrDataSegment::getWordCount(mode, version, to-from);
     }
     static uint16_t getWordCount(QrMode mode, uint8_t version, uint16_t length) {
-        uint16_t bits = 8, // mode bits + stop bits 
+        uint16_t bits = 4, // mode bits 
             charsInUnit = qr_mode_charsPerUnit[mode],
             unitLength = qr_mode_unitBitLength[mode];
         bits += qr_lengthBits(version, mode);
@@ -131,11 +131,11 @@ class CQrEncoder{
 
 
         for(uint8_t i = 0; i < segLength; i++){
-            writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, buff, &cur, version, mode);
+            writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, buff, cur, version, seg[i].mode);
         }
-        addStopBitsAndPad(buff, &cur);
+        addStopBitsAndPad(buff, cur);
         // Add padding to specified length
-        addPaddingBytes(buff, &cur, s.dataWords());
+        addPaddingBytes(buff, cur, s.dataWords());
 
         // printf("\nVersion: %d", version);
         splitBlob(buff, s);
@@ -250,7 +250,7 @@ class CQrEncoder{
         }
     }
 
-    void writeSegmentData(const char* data, uint16_t dataLen, uint8_t *buff, QrBufferCursor *cur, uint8_t version, QrMode mode){
+    void writeSegmentData(const char* data, uint16_t dataLen, uint8_t *buff, QrBufferCursor& cur, uint8_t version, QrMode mode){
         addValue(buff, cur, qr_mode_indicator[mode], 4);
         addValue(buff, cur, dataLen, qr_lengthBits(version, mode));
         addData(buff, cur, data, dataLen, mode);
@@ -550,7 +550,7 @@ class CQrEncoder{
         return QrMode::Byte;
     }
 
-    void addData(uint8_t *buff, QrBufferCursor *cursor, const char* data, uint16_t length, QrMode mode){
+    void addData(uint8_t *buff, QrBufferCursor& cursor, const char* data, uint16_t length, QrMode mode){
         switch(mode) {
             case QrMode::Numeric:
                 return this->addDataNum(data, length, buff, cursor);
@@ -562,7 +562,7 @@ class CQrEncoder{
                 return;
         }
     }
-    void addDataNum(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
+    void addDataNum(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor& cursor){
         uint16_t i = 0;
         uint16_t acc = 0;
         while (i < length) {
@@ -581,7 +581,7 @@ class CQrEncoder{
             addValue(buff, cursor, acc, 4);
         }
     }
-    void addDataAlpha(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
+    void addDataAlpha(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor& cursor){
         uint16_t i = 0;
         uint16_t acc = 0;
         while (i < length) {
@@ -613,50 +613,50 @@ class CQrEncoder{
         }
 
     }
-    void addDataByte(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
+    void addDataByte(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor& cursor){
         uint16_t i = 0;
         while (i < length) {
             addValue(buff, cursor, data[i], 8);
             i++;
         } 
     }
-    void addValue(uint8_t *buff, QrBufferCursor *cursor, uint16_t value, uint8_t bitLength) {
+    void addValue(uint8_t *buff, QrBufferCursor& cursor, uint16_t value, uint8_t bitLength) {
         if (bitLength > 8){
             addValue(buff, cursor, value >> 8, bitLength - 8);
             addValue(buff, cursor, value & 0xFF, 8);
             return;
         }
 
-        int8_t sh = 8 - cursor->bit - bitLength;
+        int8_t sh = 8 - cursor.bit - bitLength;
         if (sh >= 0){
-            buff[cursor->byte] |= value << sh;
-            cursor->bit += bitLength;
+            buff[cursor.byte] |= value << sh;
+            cursor.bit += bitLength;
         } else {
-            buff[cursor->byte] |= value >> (-sh);
-            cursor->bit = 0;
-            cursor->byte++;
+            buff[cursor.byte] |= value >> (-sh);
+            cursor.bit = 0;
+            cursor.byte++;
             
             
-            buff[cursor->byte] |= value << (8+sh);
-            cursor->bit += -sh;
+            buff[cursor.byte] |= value << (8+sh);
+            cursor.bit += -sh;
         }
 
-        if (cursor->bit == 8) {
-            cursor->bit = 0;
-            cursor->byte++;
+        if (cursor.bit == 8) {
+            cursor.bit = 0;
+            cursor.byte++;
         }
     }
 
     
-    void addStopBitsAndPad(uint8_t *buff, QrBufferCursor *cursor){
+    void addStopBitsAndPad(uint8_t *buff, QrBufferCursor& cursor){
         addValue(buff,cursor,0,4);
-        if(cursor->bit != 0){
-            addValue(buff, cursor, 0, 8-cursor->bit);
+        if(cursor.bit != 0){
+            addValue(buff, cursor, 0, 8-cursor.bit);
         }
     }
-    void addPaddingBytes(uint8_t *buff, QrBufferCursor *cursor, uint16_t length){
+    void addPaddingBytes(uint8_t *buff, QrBufferCursor& cursor, uint16_t length){
         uint8_t f = 0;
-        while(cursor->byte < length){
+        while(cursor.byte < length){
             addValue(buff,cursor, f ? 17 : 236, 8);
             f = !f;
         }

@@ -2,13 +2,12 @@
 
 ## Tools needed
 - Node and npm
-- Emscripten
+- Emscripten ((https://emscripten.org/docs/getting_started/downloads.html))
 
 ## Installation
 - run `npm install`
 - run `compile_wasm.bat`
-- run `npm run dev`
 
 
 ## Usage
-open `index.html` and enjoy! 
+Just run `npm run dev`. The browser will open up the page

@@ -1,39 +1,44 @@
 <html>
     <head>
+        <title>R-QR WASM demo</title>
         <script src="qr.js"></script>
         <script>
             genClicked = function() {
                 var text = document.getElementById("input").value;
                 var ec = document.getElementById("ec").value;
+                var ver = document.getElementById("ver").value;
+                var md = document.getElementById("md").value;
 
-                const data = Module.createQr(text, Number(ec));
+                const data = Module.createQr(text, Number(ec), Number(md), Number(ver));
                 console.log(data);
 
                 display(data);
+                displayDetails(data);
             }
-
+ 
+            displayDetails = function(data) {
+                var div = document.getElementById("details");
+                div.innerHTML = 
+                    `<b>Version:</b> v${data.version}<br>
+                     <b>Size:</b> ${data.size} x ${data.size}<br>
+                     <b>Mask pattern:</b> ${data.mask}`
+            }
             display=function(data){
-                console.log("drawing started")
                 var a = [];
                 for (var i = 0; i < data.bitmap.size(); i++) 
                     a.push(data.bitmap.get(i));
                 const z = 15;
 
-                var qr = document.getElementById("qr");
-                qr.innerHTML = "";
-                qr.setAttribute('viewBox', `0 0 ${z*data.size} ${z*data.size}`);
+                var svg = [
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="${z*(data.size + 8)}" height="${z* (data.size + 8)}" viewBox="0 0 ${z*(data.size + 8)} ${z*(data.size + 8)}">`,
+                    `<rect x="0" y="0" width="${z*(data.size + 8)}" height="${z* (data.size + 8)}" fill="#FFF"/>`
+                ];
 
                 var x = 0,y = 0, p = 0;
                 for (var b of a){
                     for (var i = 0; i < 8; i++) {
                         if (b & (1 << (7 - i))){
-                            var e = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                            e.setAttribute("width", z);
-                            e.setAttribute("height", z);
-                            e.setAttribute("x", z*x);
-                            e.setAttribute("y", z*y);
-                            e.setAttribute("fill", "#000");
-                            qr.appendChild(e);
+                            svg.push(`<rect x="${z*(x + 4)}" y="${z* (y + 4)}" width="${z}" height="${z}" fill="#000"/>`);
                         }
                         x++;
                         if (x == data.size) {
@@ -43,8 +48,13 @@
                         }
                     }
                 }
+                svg.push("</svg>");
+                var b64svg = btoa(svg.join(''));
+                
+                var qr = document.getElementById("qr");
+                qr.setAttribute("src", "data:image/svg+xml;base64, "+b64svg);
 
-                console.log("drawing done")
+                scrollTo(0, qr.parentElement.offsetTop)
             }
 
         </script>
@@ -58,7 +68,7 @@
             gap: 32px;
             font-family: sans-serif;
         }
-        body > * {
+        body > :not(h1) {
             padding: 80px;
             background: #DEF;
             border-radius: 16px;
@@ -73,8 +83,18 @@
             height: 800px;
             width: 800px;
         }
+        #details {
+            margin-top: 32px;
+            font-size: small;
+            padding: 3px 0;
+        }
+        #details b {
+            display: inline-block;
+            width: 100px;
+        }
     </style>
-    <body>
+        <body>
+        <h1>R-QR WASM demo</h1>
         <div>
             <textarea id="input" rows="6" cols="80">Sample QR code created with WASM!</textarea>
             <br>
@@ -83,6 +103,55 @@
                 <option value="1">Error correction level M</option>
                 <option value="2">Error correction level Q</option>
                 <option value="3">Error correction level H</option>
+            </select>
+            <select id="ver">
+                <option value="40">Automatic version</option>
+                <option value="0">Version 1</option>
+                <option value="1">Version 2</option>
+                <option value="2">Version 3</option>
+                <option value="3">Version 4</option>
+                <option value="4">Version 5</option>
+                <option value="5">Version 6</option>
+                <option value="6">Version 7</option>
+                <option value="7">Version 8</option>
+                <option value="8">Version 9</option>
+                <option value="9">Version 10</option>
+                <option value="10">Version 11</option>
+                <option value="11">Version 12</option>
+                <option value="12">Version 13</option>
+                <option value="13">Version 14</option>
+                <option value="14">Version 15</option>
+                <option value="15">Version 16</option>
+                <option value="16">Version 17</option>
+                <option value="17">Version 18</option>
+                <option value="18">Version 19</option>
+                <option value="19">Version 20</option>
+                <option value="20">Version 21</option>
+                <option value="21">Version 22</option>
+                <option value="22">Version 23</option>
+                <option value="23">Version 24</option>
+                <option value="24">Version 25</option>
+                <option value="25">Version 26</option>
+                <option value="26">Version 27</option>
+                <option value="27">Version 28</option>
+                <option value="28">Version 29</option>
+                <option value="29">Version 30</option>
+                <option value="30">Version 31</option>
+                <option value="31">Version 32</option>
+                <option value="32">Version 33</option>
+                <option value="33">Version 34</option>
+                <option value="34">Version 35</option>
+                <option value="35">Version 36</option>
+                <option value="36">Version 37</option>
+                <option value="37">Version 38</option>
+                <option value="38">Version 39</option>
+                <option value="39">Version 40</option>
+            </select>
+            <select id="md">
+                <option value="255">Automatic mode</option>
+                <option value="0">Numeric mode</option>
+                <option value="1">Alphanumeric mode</option>
+                <option value="2">Byte mode</option>
             </select>
             <br>
             <button onclick="genClicked(); return false;" id="generate">Generate</button>
@@ -94,9 +163,9 @@
             </p>
         </div>
         <div>
-            <svg xmlns="http://www.w3.org/2000/svg" id="qr" style="background-color: #FFF;">
-
-            </svg>
+            <img id="qr">
+            <div id="details">
+            </div>
         </div>
     </body>
 </html>
