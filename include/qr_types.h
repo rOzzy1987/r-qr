@@ -79,6 +79,10 @@ extern "C" struct QrCode {
      */
     uint8_t ecLevel;
     /**
+     * Error correction level
+     */
+    uint8_t mode;
+    /**
      * 1 bit bitmap of the code
      */
     uint8_t *bitmap;
@@ -126,6 +130,7 @@ extern "C" struct QrCode {
         bitmap = new uint8_t[bitmapSize];
         memset(bitmap, 0, bitmapSize);
 
+        this->mode = 0;
         this->formatPoly = 0;
         this->versionPoly = 0;
         this->raw = nullptr;

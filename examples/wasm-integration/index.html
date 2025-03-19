@@ -18,10 +18,16 @@
  
             displayDetails = function(data) {
                 var div = document.getElementById("details");
+                var mode = 
+                    data.mode == 0 ? 'Numeric'
+                    : data.mode == 1 ? 'Alphanumeric'
+                    : data.mode == 2 ? 'Byte'
+                    : 'Mixed';
                 div.innerHTML = 
                     `<b>Version:</b> v${data.version}<br>
                      <b>Size:</b> ${data.size} x ${data.size}<br>
-                     <b>Mask pattern:</b> ${data.mask}`
+                     <b>Mask pattern:</b> ${data.mask}<br>
+                     <b>Mode pattern:</b> ${mode}`
             }
             display=function(data){
                 var a = [];

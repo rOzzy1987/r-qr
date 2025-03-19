@@ -14,6 +14,7 @@ extern "C" {
         uint16_t version;
         uint8_t size;
         uint8_t mask;
+        uint8_t mode;
         std::vector<uint8_t> bitmap;
         uint8_t stride;
     };
@@ -26,6 +27,7 @@ extern "C" {
         c2.size = c->size;
         c2.stride = c->bitmapStride;
         c2.mask = c->mask;
+        c2.mode = c->mode;
         c2.bitmap = std::vector(c->bitmap, c->bitmap + c->bitmapSize);
 
         return c2;
@@ -40,7 +42,8 @@ EMSCRIPTEN_BINDINGS(qr_module) {
         .field("size", &WasmQrCode::size)
         .field("stride", &WasmQrCode::stride)
         .field("bitmap", &WasmQrCode::bitmap)
-        .field("mask", &WasmQrCode::mask);
+        .field("mask", &WasmQrCode::mask)
+        .field("mode", &WasmQrCode::mode);
 
     function("createQr", &createQr, allow_raw_pointers());
     register_vector<uint8_t>("UInt8Array");

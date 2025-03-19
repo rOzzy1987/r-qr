@@ -46,6 +46,7 @@ class CQrGen {
 
             buff = QrEncoder.encode(data, length, dataLen, version, mode, ecLevel);
             QrCode *code = new QrCode(version, ecLevel);
+            code->mode = mode;
             code->raw = buff;
             code->rawSize = dataLen;
 

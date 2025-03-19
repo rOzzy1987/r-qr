@@ -133,6 +133,7 @@ class CQrEncoder{
         for(uint8_t i = 0; i < segLength; i++){
             writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, buff, cur, version, seg[i].mode);
         }
+        delete[] seg;
         addStopBitsAndPad(buff, cur);
         // Add padding to specified length
         addPaddingBytes(buff, cur, s.dataWords());
