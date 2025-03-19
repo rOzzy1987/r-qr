@@ -133,6 +133,7 @@ class CQrEncoder{
         for(uint8_t i = 0; i < segLength; i++){
             writeSegmentData(data + seg[i].from, seg[i].to - seg[i].from, buff, &cur, version, mode);
         }
+        addStopBitsAndPad(buff, &cur);
         // Add padding to specified length
         addPaddingBytes(buff, &cur, s.dataWords());
 
@@ -253,7 +254,6 @@ class CQrEncoder{
         addValue(buff, cur, qr_mode_indicator[mode], 4);
         addValue(buff, cur, dataLen, qr_lengthBits(version, mode));
         addData(buff, cur, data, dataLen, mode);
-        addStopBitsAndPad(buff, cur);
     }
 
     void writeEdc(uint8_t *buff, QrBlockStruct s){
@@ -573,12 +573,12 @@ class CQrEncoder{
             addValue(buff, cursor, acc, 10);
             acc = 0;
         } 
-        if (i%3 >0) {
-            uint8_t rem  = 3 - (i % 3);
-            for (uint8_t j = 0; j <rem; j++){
-                acc = acc*10;
+        uint8_t rem = i % 3;
+        if (rem == 2) {
+            addValue(buff, cursor, acc, 7);
             }
-            addValue(buff, cursor, acc, 10);
+        if (rem == 1) {
+            addValue(buff, cursor, acc, 4);
         }
     }
     void addDataAlpha(const char *data, uint16_t length, uint8_t *buff, QrBufferCursor *cursor){
@@ -609,8 +609,7 @@ class CQrEncoder{
         } 
         
         if (i & 1) {
-            acc *= 45;
-            addValue(buff, cursor, acc, 11);
+            addValue(buff, cursor, acc, 6);
         }
 
     }
