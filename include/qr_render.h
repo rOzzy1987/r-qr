@@ -45,8 +45,8 @@ class CQrRenderer {
         }
 
         void  renderData(QrCode *code){
+            uint16_t B = 0;
             uint8_t 
-                B = 0,
                 b = 0,
                 s = code->size,
                 x = s - 1,
