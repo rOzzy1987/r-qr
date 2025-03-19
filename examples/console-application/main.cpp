@@ -1,8 +1,8 @@
 
 #include <stdio.h>
 #include <string.h>
-// #define QR_DEBUG
-#include "qr.h"
+#define QR_DEBUG // to be able to use print_qr_cc() function
+#include <qr.h>
 
 int main( int argc, char **argv) {
     uint8_t options;
@@ -70,7 +70,7 @@ int main( int argc, char **argv) {
         } else {
             printf("\nQR:");
             QrCode *code = QrGenerator.create(argv[i], strlen(argv[i]), mode, ecc);
-            print_qr(code);
+            print_qr_cc(code);
             printf("\nCode: %s", argv[i]);
             if (options & 0x40) {
                 printf("\n\nDetails:");
