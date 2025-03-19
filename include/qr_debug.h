@@ -48,21 +48,31 @@
         fflush(stdout);
     }
 
-void print_arr_f(const char* f, const uint16_t *arr, uint16_t len){
-    printf("\n(%d) [ ", len);
-    
+void print_arr_f(const char* f, const uint16_t *arr, uint16_t len, uint8_t itemsPerLine = 0){
+    printf("\n(%d) [ %s", len, itemsPerLine > 0 ? "\n" : "");
+    uint16_t c = 0;
     for(uint16_t i = 0; i < len; i++){
         printf(f, arr[i]);
+        c++;
+        if(itemsPerLine > 0 && c >= itemsPerLine){
+            printf("\n");
+            c = 0;
+        }
     }
 
     printf("]");
     fflush(stdout);
 }
-void print_arr_f(const char* f, const uint8_t *arr, uint16_t len){
-    printf("\n(%d) [ ", len);
-    
+void print_arr_f(const char* f, const uint8_t *arr, uint16_t len, uint8_t itemsPerLine = 0){
+    printf("\n(%d) [ %s", len, itemsPerLine > 0 ? "\n" : "");
+    uint16_t c = 0;
     for(uint16_t i = 0; i < len; i++){
         printf(f, arr[i]);
+        c++;
+        if(itemsPerLine > 0 && c >= itemsPerLine){
+            printf("\n");
+            c = 0;
+        }
     }
 
     printf("]");

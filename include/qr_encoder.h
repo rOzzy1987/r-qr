@@ -137,7 +137,7 @@ class CQrEncoder{
         memset(temp, 0, totalBlocks);
         #endif
         
-        for (uint16_t i0 = 1; i0 < n; i0++) {
+        for (uint16_t i0 = 1; i0 <= n; i0++) {
             // get a batch of values
             uint16_t p = blockLength; // start with the second block, the first byte is already in place
             for (uint16_t i1 = 1; i1 < totalBlocks; i1++)
@@ -148,7 +148,7 @@ class CQrEncoder{
                 #endif
                 moved[i1] = p;
 
-                p += i1 < (str.shortBlocks) ? blockLength : blockLength + 1;      
+                p += i1 < str.shortBlocks ? blockLength : blockLength + 1;      
             }
 
             // shift to eliminate 'empty' spaces
