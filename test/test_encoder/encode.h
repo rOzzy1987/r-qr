@@ -37,7 +37,7 @@ void encode_runTestCase(uint8_t n){
     uint16_t l;
     uint8_t v = tc.version;
     uint8_t *r = QrEncoder.encode(tc.data, strlen(tc.data), l, v, mode, tc.ecLevel);
-    // print_arr(r, l);
+    // print_arr_f("%02X ", r, l, 16);
     ASSERT_EQ_UI8(tc.expectedMode, mode);
     ASSERT_EQ_UI8(tc.expectedVersion, v);
     ASSERT_EQ_UI16(tc.expectedDataLen, l);

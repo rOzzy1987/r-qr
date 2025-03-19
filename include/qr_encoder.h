@@ -50,6 +50,60 @@ struct QrDataSegment {
         printf("\n(total: %4d)\n", total);
     }
 
+    void print_codewords(const uint8_t *buff, QrBlockStruct s){
+        printf("\nShort:%d, Long:%d, ShortSize:%d, LongSize:%d\n(%d) [\n", s.shortBlocks, s.longBlocks, s.dataWordsPerShortBlock + s.ecWordsPerBlock, s.dataWordsPerShortBlock +s.ecWordsPerBlock + 1, s.totalWords());
+        for(uint16_t i = 0; i < s.shortBlocks; i++){
+            for (uint16_t j = 0; j < s.dataWordsPerShortBlock + s.ecWordsPerBlock; j++){
+                printf("%02X ", buff[i * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + j]);
+            }
+            printf("\n");
+        }
+        for (uint16_t i = 0; i < s.longBlocks; i++){
+            for (uint16_t j = 0; j < s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1; j++){
+                printf("%02X ", buff[s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + i * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) + j]);
+            }
+            printf("\n");
+        }
+        printf("]\n");
+    }
+    void print_codewords_vert(const uint8_t *buff, QrBlockStruct s){
+        printf("\nShort:%d, Long:%d, ShortSize:%d, LongSize:%d\n(%d) [\n", s.shortBlocks, s.longBlocks, s.dataWordsPerShortBlock + s.ecWordsPerBlock, s.dataWordsPerShortBlock +s.ecWordsPerBlock + 1, s.totalWords());
+        uint16_t c = 0;
+        for(uint16_t i = 0; i < s.dataWordsPerShortBlock; i++){
+            for (uint16_t j = 0; j < s.shortBlocks + s.longBlocks; j++){
+                c = j < s.shortBlocks 
+                    ? j * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + i
+                    : s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + 
+                      (j - s.shortBlocks) * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) + i; 
+                printf("%02X ", buff[c]);
+            }
+            printf("\n");
+        }
+        
+        for (uint16_t j = 0; j < s.shortBlocks; j++){
+            printf("   ");
+        }
+        for (uint16_t j = 0; j < s.longBlocks; j++){
+            c = s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) +
+             j * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) +
+             s.dataWordsPerShortBlock; 
+            printf("%02X ", buff[c]);
+        }
+        printf("\n");
+        for(uint16_t i = 0; i < s.ecWordsPerBlock; i++){
+            for (uint16_t j = 0; j < s.shortBlocks + s.longBlocks; j++){
+                c = j < s.shortBlocks 
+                    ? j * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + i + s.dataWordsPerShortBlock 
+                    : s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + 
+                      (j - s.shortBlocks) * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) + i + 
+                      s.dataWordsPerShortBlock + 1; 
+                printf("%02X ", buff[c]);
+            }
+            printf("\n");
+        }
+        printf("]\n");
+    }
+
 #endif
 
 class CQrEncoder{
@@ -82,9 +136,13 @@ class CQrEncoder{
         // Add padding to specified length
         addPaddingBytes(buff, &cur, s.dataWords());
 
+        // printf("\nVersion: %d", version);
         splitBlob(buff, s);
+        // print_codewords_vert(buff, s);
         writeEdc(buff, s);
+        // print_codewords_vert(buff, s);
         mixBlocks(buff, s);
+        // print_arr_f("%02X ", buff, buffSize, s.shortBlocks + s.longBlocks);
 
         resultLen = buffSize;
         return buff;
