@@ -16,7 +16,7 @@ struct CreateTestCase {
 CreateTestCase create_testCases[] = {
     {"https://www.qrcode.com/", 1, QrMode::Byte, QrEcc::M, 0b101111001111100, 2},
     {"https://www.qrcode.com/", 6, QrMode::Byte, QrEcc::M, 0b101010000010010, 0},
-    {"https://www.qrcode.com/", 10, QrMode::Unspecified, QrEcc::H, 0b000011101100010, 4},
+    {"https://www.qrcode.com/", 10, QrMode::Unspecified, QrEcc::H, 0b0001011010001001, 4},
 };
 
 static void create_runTestCase(uint8_t n){
@@ -44,4 +44,16 @@ void qrgen_create_forcedMultiBlock() {
 
 void qrgen_create_forcedMultiGroup() {
     create_runTestCase(2);
+}
+
+void qrgen_create_multi_version() {
+    for (uint8_t i = 0; i < 6; i++) {
+        
+        QrCode *r = QrGenerator.create("https://www.qrcode.com/", 23, QrMode::Unspecified, QrEcc::H, 6+i);
+    
+        print_qr(r);
+        print_qr_details(r);
+        print_bin(r->formatPoly);
+        printf("\n");
+    }
 }

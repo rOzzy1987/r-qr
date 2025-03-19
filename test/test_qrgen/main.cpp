@@ -12,6 +12,7 @@ int main( int argc, char **argv) {
     RUN_TEST(qrgen_create_onlineExample);
     RUN_TEST(qrgen_create_forcedMultiBlock);
     RUN_TEST(qrgen_create_forcedMultiGroup);
+    RUN_TEST(qrgen_create_multi_version);
 
     RUN_TEST(qrgen_changeMask_smallText);
     RUN_TEST(qrgen_changeMask_smallNumber);
