@@ -4,7 +4,7 @@
 Gcc, G++
 
 ## Compiling
-`g++ -I"../../include" -o rqr.exe main.cpp`
+Run `compile.bat`
 
 ## Usage
 `rqr [--stats] [--details] [--ecc={L|M|Q|H}] [--mode={N|A|B}] [--stress] {...valuesToEncode}`
