@@ -3,12 +3,7 @@
 
 #include <stdint.h>
 #include "qr_types.h"
-#include "qr_data.h"
-#include "qr_gf256.h"
-#include "qr_render.h"
-#include "qr_rank.h"
 #include "qr_debug.h"
-#include "qr_encoder.h"
 
 class CQrGen {
     public:
@@ -20,17 +15,7 @@ class CQrGen {
          * @param ecLevel QR error correction level to use (default: QrEcc::L)
          * @return a QrCode object containing the encoded data and the rendered bitmap
          */
-        QrCode* create(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L, uint8_t version = 40){
-            QrCode *code = createRaw(data, length, mode, ecLevel, version);
-            setFormatPoly(code);
-            setVersionPoly(code);
-            QrRenderer.render(code);
-            QrRenderer.renderFormat(code);
-            QrRenderer.renderVersion(code);
-            applyBestMask(code);
-
-            return code;
-        }
+        QrCode* create(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L, uint8_t version = 40);
 
         /**
          * Creates a QR code from raw data without rendering the bitmap (allocates space though)
@@ -40,18 +25,7 @@ class CQrGen {
          * @param ecLevel QR error correction level to use (default: QrEcc::L)
          * @return QrCode object
          */
-        QrCode* createRaw(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L, uint8_t version = 40) {
-            uint8_t *buff;
-            uint16_t dataLen;
-
-            buff = QrEncoder.encode(data, length, dataLen, version, mode, ecLevel);
-            QrCode *code = new QrCode(version, ecLevel);
-            code->mode = mode;
-            code->raw = buff;
-            code->rawSize = dataLen;
-
-            return code;
-        }
+        QrCode* createRaw(const char* data, uint16_t length, QrMode mode = QrMode::Unspecified, QrEcc ecLevel = QrEcc::L, uint8_t version = 40);
        
         /**
          * Sets the format information for a given QR code by mapping the error correction level 
@@ -63,22 +37,7 @@ class CQrGen {
          *
          * @param code Pointer to the QrCode object whose format information is to be set.
          */        
-        void setFormatPoly(QrCode *code){
-            // Need to map ecLevel according to the table below
-            // Note that only the last bit is flipped
-            //                L  M  Q  H
-            // Logical value  00 01 10 11
-            // Mapped value   01 00 11 10
-            int8_t 
-                ec = code->ecLevel ^ 0x01,
-                m = code->mask;
-            uint16_t 
-                f = ((ec << 3) | m) << 10;
-
-            f = (uint16_t)setEccBits(f, qr_format_divisor, 15, 11);
-            f ^= qr_format_mask;
-            code->formatPoly = f;
-        }
+        void setFormatPoly(QrCode *code);
 
         /**
          * Sets the version information for a given QR code by mapping the version number to a 18-bit 
@@ -89,9 +48,7 @@ class CQrGen {
          *
          * @param code Pointer to the QrCode object whose version information is to be set.
          */        
-        void setVersionPoly(QrCode *code){
-            code->versionPoly = setEccBits((code->version+1) << 12, qr_version_divisor, 18, 13);
-        }
+        void setVersionPoly(QrCode *code);
 
         /**
          * This function implements the Reed-Solomon error correction algorithm's long division step.
@@ -105,37 +62,14 @@ class CQrGen {
          * @param divisorLength Length of the divisor (input)
          * @return Result of the division (uint32_t)
          */
-        uint32_t setEccBits(uint32_t f, uint32_t d, uint8_t totalLength, uint8_t divisorLength){
-            uint32_t t = f,
-            bit = 1 << (totalLength - 1);
-
-            for(int8_t i = totalLength - divisorLength; i >= 0; i--){
-                if (t & bit){
-                    t ^= d << i;
-                }
-                bit >>= 1;
-            }
-            return f | t;
-        }
+        uint32_t setEccBits(uint32_t f, uint32_t d, uint8_t totalLength, uint8_t divisorLength);
         
         /**
          * Applies the best mask to the QR code. It does this by computing the rank of the QR code with each mask and then
          * selecting the mask with the lowest rank.
          * @param code The QR code to apply the best mask to
          */
-        void applyBestMask(QrCode *code){
-            uint16_t scores[8] = {QrRanker.rank(code)};
-            for(uint8_t i = 1; i < 8; i++){
-                changeMask(code, i);
-                scores[i] = QrRanker.rank(code);
-            }
-
-            uint8_t mi = 0;
-            for (uint8_t i = 0; i < 8; i++){
-                if (scores[i] < scores[mi]) mi = i;
-            }
-            changeMask(code, mi);
-        }
+        void applyBestMask(QrCode *code);
 
         /**
          * Changes the mask applied to the given QR code by first removing the existing mask and then
@@ -145,15 +79,9 @@ class CQrGen {
          * @param code Pointer to the QrCode object to which the mask change should be applied.
          * @param mask The new mask pattern to apply to the QR code.
          */
-        void changeMask(QrCode *code, uint8_t mask){
-            QrRenderer.applyMask(code, code->mask);
-            QrRenderer.applyMask(code, mask);
-            code->mask = mask;
-            setFormatPoly(code);
-            QrRenderer.renderFormat(code);
-        }
+        void changeMask(QrCode *code, uint8_t mask);
 };
 
-CQrGen QrGenerator;
+extern CQrGen QrGenerator;
 
 #endif //__QR_H

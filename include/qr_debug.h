@@ -2,6 +2,11 @@
 #define __QR_DEBUG
 #ifdef QR_DEBUG
 
+#include <stdio.h>
+#include <stdint.h>
+#include "qr_types.h"
+#include "qr_segment.h"
+
 #define BTBF "%c%c%c%c%c%c%c%c"
 #define BTB(b)\
     ((uint8_t)(b) & 0x80 ? '1' : '0'),\
@@ -181,6 +186,71 @@ void print_qr(QrCode *code) {
 }
 #endif //ARDUINO
 
+void print_segments(const QrDataSegment *cs, uint8_t sl, uint8_t v){
+    printf("\n%d segments", sl);
+    QrDataSegment *s = (QrDataSegment*)cs;
+    uint16_t total = 0;
+    for (uint8_t i = 0; i < sl; i++){
+        QrMode m = s[i].mode;
+        total += s[i].getWordCount( v);
+        printf("\n(%3d - %3d): %5s (%3d)", s[i].from, s[i].to, m == 0 ? "Num" : m == 1 ? "Alpha" : "Byte", s[i].getWordCount(v));
+    }
+    printf("\n(total: %4d)\n", total);
+}
+
+void print_codewords(const uint8_t *buff, QrBlockStruct s){
+    printf("\nShort:%d, Long:%d, ShortSize:%d, LongSize:%d\n(%d) [\n", s.shortBlocks, s.longBlocks, s.dataWordsPerShortBlock + s.ecWordsPerBlock, s.dataWordsPerShortBlock +s.ecWordsPerBlock + 1, s.totalWords());
+    for(uint16_t i = 0; i < s.shortBlocks; i++){
+        for (uint16_t j = 0; j < s.dataWordsPerShortBlock + s.ecWordsPerBlock; j++){
+            printf("%02X ", buff[i * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + j]);
+        }
+        printf("\n");
+    }
+    for (uint16_t i = 0; i < s.longBlocks; i++){
+        for (uint16_t j = 0; j < s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1; j++){
+            printf("%02X ", buff[s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + i * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) + j]);
+        }
+        printf("\n");
+    }
+    printf("]\n");
+}
+void print_codewords_vert(const uint8_t *buff, QrBlockStruct s){
+    printf("\nShort:%d, Long:%d, ShortSize:%d, LongSize:%d\n(%d) [\n", s.shortBlocks, s.longBlocks, s.dataWordsPerShortBlock + s.ecWordsPerBlock, s.dataWordsPerShortBlock +s.ecWordsPerBlock + 1, s.totalWords());
+    uint16_t c = 0;
+    for(uint16_t i = 0; i < s.dataWordsPerShortBlock; i++){
+        for (uint16_t j = 0; j < s.shortBlocks + s.longBlocks; j++){
+            c = j < s.shortBlocks 
+                ? j * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + i
+                : s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + 
+                  (j - s.shortBlocks) * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) + i; 
+            printf("%02X ", buff[c]);
+        }
+        printf("\n");
+    }
+    
+    for (uint16_t j = 0; j < s.shortBlocks; j++){
+        printf("   ");
+    }
+    for (uint16_t j = 0; j < s.longBlocks; j++){
+        c = s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) +
+         j * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) +
+         s.dataWordsPerShortBlock; 
+        printf("%02X ", buff[c]);
+    }
+    printf("\n");
+    for(uint16_t i = 0; i < s.ecWordsPerBlock; i++){
+        for (uint16_t j = 0; j < s.shortBlocks + s.longBlocks; j++){
+            c = j < s.shortBlocks 
+                ? j * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + i + s.dataWordsPerShortBlock 
+                : s.shortBlocks * (s.dataWordsPerShortBlock + s.ecWordsPerBlock) + 
+                  (j - s.shortBlocks) * (s.dataWordsPerShortBlock + s.ecWordsPerBlock + 1) + i + 
+                  s.dataWordsPerShortBlock + 1; 
+            printf("%02X ", buff[c]);
+        }
+        printf("\n");
+    }
+    printf("]\n");
+}
 
 #endif //QR_DEBUG
 

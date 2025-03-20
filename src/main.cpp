@@ -8,7 +8,7 @@
 
 // Comment out to only use a single data segment in the code
 #define QR_OPTIMIZE_SEGMENTS
-#include "qr.h"
+#include <qr.h>
 
 #if defined ARDUINO || defined ESP32
     void setup() {
