@@ -1,8 +1,8 @@
 {
     "name": "R-QR",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A low-resource, low-effort QR code generator library built without dependencies.",
-    "keywords": "qr-code, barcode, 2d-barcode",
+    "keywords": ["qr", "qr code", "qr-code", "qrcode", "barcode", "2d-barcode", "lightweight", "memory-efficient"],
     "repository":
     {
       "type": "git",
@@ -17,7 +17,34 @@
       }
     ],
     "license": "MIT",
-    "homepage": "https://github.com/rOzzy1987/rqr",
+    "homepage": "https://github.com/rOzzy1987/r-qr",
     "frameworks": "*",
-    "platforms": "*"
+    "platforms": "*",
+    "examples": [
+      {
+        "name": "Console application",
+        "base": "examples/console-application",
+        "files": [
+            "main.cpp",
+            "compile.bat",
+            "readme.md"
+        ]
+      },{
+        "name": "WASM integration",
+        "base": "examples/wasm-integration",
+        "files": [
+            "main.cpp",
+            "index.html",
+            "package.json",
+            "compile_wassm.bat",
+            "readme.md"
+        ]
+      },{
+        "name": "Simple arduino",
+        "base": "examples/simple-arduino",
+        "files": [
+            "main.cpp"
+        ]
+      }
+    ]
   }
